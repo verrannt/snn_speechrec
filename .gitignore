@@ -1,6 +1,9 @@
 # Project related files
 data/
 
+# VSCode related files
+.vscode/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
