@@ -245,10 +245,11 @@ class SpeechModel():
 
         import timeit
 
+        spike_frames = self.input_layer.dummy_call(n_timesteps=n_timesteps)
+        
         # A single run on the network
         def run():
             self.conv_layer.reset()
-            spike_frames = self.input_layer.dummy_call(n_timesteps=n_timesteps)
             conv_spikes = []
             for spikes in spike_frames:
                 conv_spikes.append(self.conv_layer(spikes))
