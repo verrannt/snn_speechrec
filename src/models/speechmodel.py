@@ -93,17 +93,13 @@ class ConvLayer():
         self.v_thresh = 28.0
         self.v_reset = 0.0
         
-        # Parameters for STDP
+        # Parameters for STDP (NOTE: not necessarily all are needed)
         self.tauM = 10.0,
         self.timestep = 0.1,
         self.tau_plus = 10.0,
         self.tau_minus = 10.0,
         self.A_plus = 0.005,
         self.A_minus = 1.1*0.005
-        
-        # Traces for STDP
-        self.stdp_input_traces = np.zeros(self.input_shape)
-        self.stdp_output_traces = np.zeros(self.shape)
     
     def __call__(self, spikes):
         """ Call the convolutional layer on spikes from the input layer. It 
@@ -133,27 +129,21 @@ class ConvLayer():
         output_spikes = np.zeros(self.shape, dtype=bool)
            
         if self.is_training:
-        
-            # Update traces
-            self.stdp_input_traces -= (self.stdp_input_traces * self.timestep) / self.tau_plus
-            self.stdp_output_traces -= (self.stdp_output_traces * self.timestep) / self.tau_minus
-            
-            # Pre-synaptic spike
+            # If needed, you can loop through the presynaptic (input) spikes
             for row_in in range(self.input_shape[0]):
                 for col_in in range(self.input_shape[1]):
                     if spikes[row_in,col_in]:
-                        # Update input traces
-                        self.stdp_input_traces[row_in,col_in] += 1
-                        # Update weights
-                        self.weights[:,j] -= self.A_minus * self.stdp_output_traces[j,k]
+                        # TODO Update weights
+                        pass
 
-        # Record spikes and update traces
+        # Record spikes and update weights
         for row in range(self.shape[0]):
             for col in range(self.shape[1]):
                 
                 # Update membrane potential
-                self.membrane_voltages[row,col] += np.sum(
-                    self.weights[row//self.window_size,col,:,:] * spikes[row:row+self.window_size,:])
+                self.membrane_voltages[row,col] += np.sum(np.multiply(
+                    self.weights[row//self.window_size,col,:,:], 
+                    spikes[row:row+self.window_size,:]))
                 
                 # Post-synaptic spike
                 if self.membrane_voltages[row,col] >= self.v_thresh:
@@ -163,15 +153,13 @@ class ConvLayer():
                     self.membrane_voltages[row,col] = self.v_reset
 
                     if self.is_training:
-                    
-                        # Update weights
-                        self.weights[row//self.window_size,col,:,:] += \
-                            self.A_plus * self.stdp_input_traces[row:row+self.window_size,:]
-                
-                        self.stdp_output_traces[row,col] += 1
+                        # TODO Update weights
+                        pass
                     
                     # Lateral inhibition: when one spike in this row has occured
-                    # skip all other neurons in this row
+                    # skip all other neurons in this row. NOTE please also 
+                    # think about whether this makes sense, this was just my
+                    # first idea
                     break
         
         return output_spikes
@@ -179,8 +167,6 @@ class ConvLayer():
     def reset(self):
         """ Reset all internal states for a new input sample. """
         self.membrane_voltages = np.zeros(self.shape)
-        self.stdp_input_traces = np.zeros(self.input_shape)
-        self.stdp_output_traces = np.zeros(self.shape)
 
 # TODO Implement pooling layer
 class PoolingLayer():
@@ -243,12 +229,16 @@ class SpeechModel():
         """ Test execution time of network using dummy calls on the input 
         layer """
 
+        print('Running {} tests with {} timesteps each'.format(
+            n_trials, n_timesteps))
+
         import timeit
 
+        spike_frames = self.input_layer.dummy_call(n_timesteps=n_timesteps)
+        
         # A single run on the network
         def run():
             self.conv_layer.reset()
-            spike_frames = self.input_layer.dummy_call(n_timesteps=n_timesteps)
             conv_spikes = []
             for spikes in spike_frames:
                 conv_spikes.append(self.conv_layer(spikes))
