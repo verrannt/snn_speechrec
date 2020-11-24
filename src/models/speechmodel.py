@@ -239,25 +239,21 @@ class SpeechModel():
             
         return membrane_potentials
 
-    def test_run(self, n_timesteps):
-        self.conv_layer.reset()
-        spike_frames = self.input_layer.dummy_call(n_timesteps=10)
-        conv_spikes = []
-        for spikes in spike_frames:
-            conv_spikes.append(self.conv_layer(spikes))
-        return conv_spikes
+    def time_test(self, n_trials, n_timesteps):
+        """ Test execution time of network using dummy calls on the input 
+        layer """
 
+        import timeit
 
-if __name__=='__main__':
+        # A single run on the network
+        def run():
+            self.conv_layer.reset()
+            spike_frames = self.input_layer.dummy_call(n_timesteps=n_timesteps)
+            conv_spikes = []
+            for spikes in spike_frames:
+                conv_spikes.append(self.conv_layer(spikes))
 
-    # Init model
-    model = SpeechModel(input_shape = (41,40))
-
-    # Freeze model because STDP is not correctly implemented
-    model.freeze()
-
-    # Test run
-    #conv_spikes = model.test_run(10)
-    membrane_potentials = model.run_on_image(None)
-
-    print('Done.')
+        # Record time for `n_trials` trials
+        time = timeit.timeit(run, number=n_trials)
+        
+        print('Total time: {:.3f}s, Average: {:.3f}s'.format(time,time/n_trials))
