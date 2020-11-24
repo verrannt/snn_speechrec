@@ -152,8 +152,9 @@ class ConvLayer():
             for col in range(self.shape[1]):
                 
                 # Update membrane potential
-                self.membrane_voltages[row,col] += np.sum(
-                    self.weights[row//self.window_size,col,:,:] * spikes[row:row+self.window_size,:])
+                self.membrane_voltages[row,col] += np.sum(np.multiply(
+                    self.weights[row//self.window_size,col,:,:], 
+                    spikes[row:row+self.window_size,:]))
                 
                 # Post-synaptic spike
                 if self.membrane_voltages[row,col] >= self.v_thresh:
