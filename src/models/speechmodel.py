@@ -134,6 +134,7 @@ class ConvLayer():
                 for col_in in range(self.input_shape[1]):
                     if spikes[row_in,col_in]:
                         # TODO Update weights
+                        pass
 
         # Record spikes and update weights
         for row in range(self.shape[0]):
@@ -153,6 +154,7 @@ class ConvLayer():
 
                     if self.is_training:
                         # TODO Update weights
+                        pass
                     
                     # Lateral inhibition: when one spike in this row has occured
                     # skip all other neurons in this row. NOTE please also 
