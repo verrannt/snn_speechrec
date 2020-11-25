@@ -16,6 +16,9 @@ def getArgs():
     parser.add_argument("--dummy_test", 
                         action='store_true',
                         help='Dummy test network and record time')
+    parser.add_argument("-l", "--load_weights", 
+                        type=str,
+                        help="Path to weights stored as numpy array file.")
     parser.add_argument("-d", "--datapath", 
                         type=str,
                         help="Path to train set")
@@ -30,15 +33,14 @@ if __name__=='__main__':
 
     CONFIGS = getArgs()
 
-    if CONFIGS.train:
-        print('Training not implemented')
-
-    if CONFIGS.dummy_test:
         # Init model
         model = SpeechModel(input_shape = (41,40))
 
-        # Freeze model because STDP is not correctly implemented
+    if CONFIGS.load_weights:
+        model.load_weights(path=CONFIGS.load_weights)
+
         model.freeze()
 
+    if CONFIGS.dummy_test:
         # Test speed
         model.time_test(n_trials=10, n_timesteps=20)

@@ -215,6 +215,11 @@ class SpeechModel():
         self.conv_layer = ConvLayer(input_shape)
         self.pooling_layer = PoolingLayer()
         
+    def load_weights(self, path):
+        """ Load weights for the model from a numpy array stored on disk.
+        Array must be of same shape as weights in convolutional layer. """
+        raise NotImplementedError("Loading weights is not yet implemented.")
+
     def freeze(self):
         """ Freeze the model weights to disable STDP learning when input is 
         fed to the model. """
