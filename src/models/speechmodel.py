@@ -78,8 +78,8 @@ class ConvLayer():
         # window, i.e. another 2-D matrix with weights for every input neuron 
         # that is covered by it.
         self.weights = np.random.normal(
-            loc=0.0, 
-            scale=0.1, 
+            loc=0.8,
+            scale=0.05,
             size=(self.n_windows_per_feature,
                   self.n_featuremaps,
                   self.window_size,
@@ -88,22 +88,18 @@ class ConvLayer():
         # Membrane voltages, i.e. the internal state of every neuron in 
         # this layer
         self.membrane_voltages = np.zeros(self.shape)
+
+        #Record the spiking history of the input neurons, to do STDP
+        self.input_spike_history = np.zeros(self.input_shape)
         
         # Parameters for Integrate-and-Fire neurons
         self.v_thresh = 28.0
         self.v_reset = 0.0
         
-        # Parameters for STDP
-        self.tauM = 10.0,
-        self.timestep = 0.1,
-        self.tau_plus = 10.0,
-        self.tau_minus = 10.0,
-        self.A_plus = 0.005,
-        self.A_minus = 1.1*0.005
-        
-        # Traces for STDP
-        self.stdp_input_traces = np.zeros(self.input_shape)
-        self.stdp_output_traces = np.zeros(self.shape)
+        # Parameters for STDP (NOTE: not necessarily all are needed)
+        self.A_plus = 0.004
+        self.A_minus = 0.003
+        self.delta_weight = 0
     
     def __call__(self, spikes):
         """ Call the convolutional layer on spikes from the input layer. It 
@@ -130,30 +126,27 @@ class ConvLayer():
                     spikes.shape, self.input_shape
                 ))
 
+        #Update the history of input spikes with the spikes in the current timestep
+        self.input_spike_history += spikes
+
         output_spikes = np.zeros(self.shape, dtype=bool)
            
-        if self.is_training:
-        
-            # Update traces
-            self.stdp_input_traces -= (self.stdp_input_traces * self.timestep) / self.tau_plus
-            self.stdp_output_traces -= (self.stdp_output_traces * self.timestep) / self.tau_minus
-            
-            # Pre-synaptic spike
-            for row_in in range(self.input_shape[0]):
-                for col_in in range(self.input_shape[1]):
-                    if spikes[row_in,col_in]:
-                        # Update input traces
-                        self.stdp_input_traces[row_in,col_in] += 1
-                        # Update weights
-                        self.weights[:,j] -= self.A_minus * self.stdp_output_traces[j,k]
+        # if self.is_training:
+        #     # If needed, you can loop through the presynaptic (input) spikes
+        #     for row_in in range(self.input_shape[0]):
+        #         for col_in in range(self.input_shape[1]):
+        #             if spikes[row_in,col_in]:
+        #                 # TODO Update weights
+        #                 pass
 
-        # Record spikes and update traces
+        # Record spikes and update weights
         for row in range(self.shape[0]):
             for col in range(self.shape[1]):
                 
                 # Update membrane potential
-                self.membrane_voltages[row,col] += np.sum(
-                    self.weights[row//self.window_size,col,:,:] * spikes[row:row+self.window_size,:])
+                self.membrane_voltages[row,col] += np.sum(np.multiply(
+                    self.weights[row//self.window_size,col,:,:], 
+                    spikes[row:row+self.window_size,:]))
                 
                 # Post-synaptic spike
                 if self.membrane_voltages[row,col] >= self.v_thresh:
@@ -163,24 +156,43 @@ class ConvLayer():
                     self.membrane_voltages[row,col] = self.v_reset
 
                     if self.is_training:
-                    
-                        # Update weights
-                        self.weights[row//self.window_size,col,:,:] += \
-                            self.A_plus * self.stdp_input_traces[row:row+self.window_size,:]
-                
-                        self.stdp_output_traces[row,col] += 1
+                        # Update for input spike before output spike
+
+                        delta_weights = self.A_plus * \
+                            np.multiply(np.multiply(self.weights[row//self.window_size,col,:,:], (1-self.weights[row//self.window_size,col,:,:])),
+                            self.input_spike_history[row:row + self.window_size, :])
+                        delta_weight += np.sum(abs(delta_weights))
+                        self.weights[row // self.window_size, col, :, :] += delta_weights
+                        # Update for elsewise
+                        delta_weights = - self.A_minus * \
+                            np.multiply(np.multiply(self.weights[row // self.window_size, col, :, :],
+                            (1 - self.weights[row // self.window_size, col, :, :])),
+                            abs(self.input_spike_history[row:row + self.window_size, :]-1))
+                        delta_weight += np.sum(abs(delta_weights))
+                        self.weights[row // self.window_size, col, :, :] += delta_weights
+
                     
                     # Lateral inhibition: when one spike in this row has occured
-                    # skip all other neurons in this row
+                    # skip all other neurons in this row. NOTE please also 
+                    # think about whether this makes sense, this was just my
+                    # first idea
                     break
-        
-        return output_spikes
+        #Lateral inhibition currently only works for one timestep. It should work for all timesteps.
+        # TODO: store what neurons are still allowed to fire, and update this based on the firing in every timestep.
+
+
+        if self.delta_weight < 0.01 and self.is_training:
+            print('Training stopped because weight changes became insufficient')
+            self.is_training = False
+
+
+        return output_spikes, self.is_training
     
     def reset(self):
         """ Reset all internal states for a new input sample. """
         self.membrane_voltages = np.zeros(self.shape)
-        self.stdp_input_traces = np.zeros(self.input_shape)
-        self.stdp_output_traces = np.zeros(self.shape)
+        self.input_spike_history = np.zeros(self.input_shape)
+        self.delta_weight = 0
 
 # TODO Implement pooling layer
 class PoolingLayer():
@@ -239,25 +251,25 @@ class SpeechModel():
             
         return membrane_potentials
 
-    def test_run(self, n_timesteps):
-        self.conv_layer.reset()
-        spike_frames = self.input_layer.dummy_call(n_timesteps=10)
-        conv_spikes = []
-        for spikes in spike_frames:
-            conv_spikes.append(self.conv_layer(spikes))
-        return conv_spikes
+    def time_test(self, n_trials, n_timesteps):
+        """ Test execution time of network using dummy calls on the input 
+        layer """
 
+        print('Running {} tests with {} timesteps each'.format(
+            n_trials, n_timesteps))
 
-if __name__=='__main__':
+        import timeit
 
-    # Init model
-    model = SpeechModel(input_shape = (41,40))
+        spike_frames = self.input_layer.dummy_call(n_timesteps=n_timesteps)
+        
+        # A single run on the network
+        def run():
+            self.conv_layer.reset()
+            conv_spikes = []
+            for spikes in spike_frames:
+                conv_spikes.append(self.conv_layer(spikes))
 
-    # Freeze model because STDP is not correctly implemented
-    model.freeze()
-
-    # Test run
-    #conv_spikes = model.test_run(10)
-    membrane_potentials = model.run_on_image(None)
-
-    print('Done.')
+        # Record time for `n_trials` trials
+        time = timeit.timeit(run, number=n_trials)
+        
+        print('Total time: {:.3f}s, Average: {:.3f}s'.format(time,time/n_trials))
