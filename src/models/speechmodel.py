@@ -91,6 +91,8 @@ class ConvLayer():
 
         #Record the spiking history of the input neurons, to do STDP
         self.input_spike_history = np.zeros(self.input_shape)
+        self.allowed_to_spike = np.ones(self.shape)
+        self.allowed_to_learn = np.ones(self.shape)
         
         # Parameters for Integrate-and-Fire neurons
         self.v_thresh = 28.0
@@ -131,20 +133,12 @@ class ConvLayer():
 
         output_spikes = np.zeros(self.shape, dtype=bool)
            
-        # if self.is_training:
-        #     # If needed, you can loop through the presynaptic (input) spikes
-        #     for row_in in range(self.input_shape[0]):
-        #         for col_in in range(self.input_shape[1]):
-        #             if spikes[row_in,col_in]:
-        #                 # TODO Update weights
-        #                 pass
-
         # Record spikes and update weights
         for row in range(self.shape[0]):
             for col in range(self.shape[1]):
                 
-                # Update membrane potential
-                self.membrane_voltages[row,col] += np.sum(np.multiply(
+                # Update membrane potential if not inhibited
+                self.membrane_voltages[row,col] += self.allowed_to_spike[row,col] * np.sum(np.multiply(
                     self.weights[row//self.window_size,col,:,:], 
                     spikes[row:row+self.window_size,:]))
                 
@@ -155,43 +149,43 @@ class ConvLayer():
                     # Reset membrane potential
                     self.membrane_voltages[row,col] = self.v_reset
 
+                    #Update weights if stpd is allowed for this neuron
                     if self.is_training:
                         # Update for input spike before output spike
-
-                        delta_weights = self.A_plus * \
-                            np.multiply(np.multiply(self.weights[row//self.window_size,col,:,:], (1-self.weights[row//self.window_size,col,:,:])),
+                        delta_weights = self.allowed_to_learn[row, col] * self.A_plus * \
+                            np.multiply(np.multiply(self.weights[row//self.window_size, col, :, :],
+                            (1-self.weights[row//self.window_size,col,:,:])),
                             self.input_spike_history[row:row + self.window_size, :])
-                        delta_weight += np.sum(abs(delta_weights))
                         self.weights[row // self.window_size, col, :, :] += delta_weights
+                        # Keep track of the total weight change
+                        self.delta_weight += np.sum(abs(delta_weights))
+
                         # Update for elsewise
-                        delta_weights = - self.A_minus * \
+                        delta_weights = self.allowed_to_learn[row, col] * -self.A_minus * \
                             np.multiply(np.multiply(self.weights[row // self.window_size, col, :, :],
                             (1 - self.weights[row // self.window_size, col, :, :])),
                             abs(self.input_spike_history[row:row + self.window_size, :]-1))
-                        delta_weight += np.sum(abs(delta_weights))
                         self.weights[row // self.window_size, col, :, :] += delta_weights
+                        # Keep track of the total weight change
+                        self.delta_weight += np.sum(abs(delta_weights))
 
-                    
-                    # Lateral inhibition: when one spike in this row has occured
-                    # skip all other neurons in this row. NOTE please also 
-                    # think about whether this makes sense, this was just my
-                    # first idea
+                    # Lateral inhibition of neurons in this row
+                    self.allowed_to_spike[row, :] = 0
+                    # Disallowing row of neurons to learn with STDP
+                    self.allowed_to_learn[row, :] = 0
+                    # Disallowing neighborhood neurons to learn with STDP
+                    self.allowed_to_learn[row-row%self.window_size : row+self.window_size - row%self.window_size, col] = 0
+                    # Break for fast inhibition (no unneeded checks done)
                     break
-        #Lateral inhibition currently only works for one timestep. It should work for all timesteps.
-        # TODO: store what neurons are still allowed to fire, and update this based on the firing in every timestep.
 
-
-        if self.delta_weight < 0.01 and self.is_training:
-            print('Training stopped because weight changes became insufficient')
-            self.is_training = False
-
-
-        return output_spikes, self.is_training
+        return output_spikes
     
     def reset(self):
         """ Reset all internal states for a new input sample. """
         self.membrane_voltages = np.zeros(self.shape)
         self.input_spike_history = np.zeros(self.input_shape)
+        self.allowed_to_spike = np.ones(self.shape)
+        self.allowed_to_learn = np.ones(self.shape)
         self.delta_weight = 0
 
 # TODO Implement pooling layer
@@ -248,6 +242,8 @@ class SpeechModel():
             # NOTE Right now the pooling layer only returns None-types because
             # it's not yet implemented
             membrane_potentials[i] = self.pooling_layer(spikes)
+
+        #@TODO Stop training when weight update is so small enough
             
         return membrane_potentials
 
@@ -267,8 +263,11 @@ class SpeechModel():
             self.conv_layer.reset()
             conv_spikes = []
             for spikes in spike_frames:
+                print('iets randoms')
                 conv_spikes.append(self.conv_layer(spikes))
-
+            if self.conv_layer.is_training and self.conv_layer.delta_weight < 0.01:
+                print('Training stopped because weight changes became insufficient')
+                self.conv_layer.is_training = False
         # Record time for `n_trials` trials
         time = timeit.timeit(run, number=n_trials)
         
