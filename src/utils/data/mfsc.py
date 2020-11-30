@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import scipy.io
 from tqdm import tqdm
 from python_speech_features import logfbank
+import os
 
 class TIDIGIT_Converter():
     """This class is for converting TIDIGIT data to mfsc features"""
@@ -51,7 +52,7 @@ class TIDIGIT_Converter():
         sample_rates = [sample_rate] * len(samples)
         for index,item in tqdm(enumerate(samples)):
             audios[index] = item[0]
-        results = self.all_mfsc_lib(audios, sample_rates, timeframes,
+        results = self.mfsc_conv.all_mfsc_lib(audios, sample_rates, timeframes,
                                 freq_bins)
         return results
 
@@ -62,17 +63,39 @@ class TIMIT_Converter():
     def __init__(self):
         self.mfsc_conv = MFSC_Converter()
 
+    def convert_timit_own(self, PATH, timeframes, freq_bins):
+        sound_list, s_rate_list = self.get_all_lists(PATH)
+        results = self.mfsc_conv.all_mfsc_own(sound_list, s_rate_list, timeframes,freq_bins)
+        return results
+
+    def convert_timit_lib(self, PATH, timeframes, freq_bins):
+        sound_list, s_rate_list = self.get_all_lists(PATH)
+        results = self.mfsc_conv.all_mfsc_lib(sound_list, s_rate_list,
+                                              timeframes, freq_bins)
+        return results
+
+    def get_all_lists(self, PATH):
+        wav_names = []
+        for root, dirs, files in os.walk(PATH):
+            for file in files:
+                if file.endswith(".wav"):
+                    wav_names.append(os.path.join(root,file))
+        return self.wav_to_list(wav_names)
+
+
     def wav_to_list(self, wav_files):
         """
         Converts wav format files to a list of sounds
         :param wav_files: A list of the wav filenames
         :return: list of sounds
         """
-        audio_list = np.zeros(len(wav_files))
-        for ind, filename in enumerate(wav_files):
+        audio_list = [None]*len(wav_files)#np.zeros(len(wav_files))
+        s_rate_list = np.zeros(len(wav_files))
+        for ind, filename in tqdm(enumerate(wav_files)):
             audio, sample_rate = librosa.load(filename)
             audio_list[ind] = audio
-        return audio_list
+            s_rate_list[ind] = sample_rate
+        return audio_list, s_rate_list
 
 class MFSC_Converter():
     """This class is for converting audio data to mfsc features"""
@@ -107,10 +130,24 @@ class MFSC_Converter():
         n_sounds = len(sound_list)
         all_results = n_sounds * [None]
         for i in tqdm(range(n_sounds)):
+            #Old version:
             duration = len(sound_list[i])/s_rate_list[i]
             winstep = duration/timeframes
+            #Notes: winlen = winstep+2*overlap. Winstep = winstep-overlap
+            #Possibly use identical calculations to making frames?
+            #Winlen should be same as fft, winstep should be window length
+            #NOTE: Change calculation of winstep too.
             all_results[i] = logfbank(sound_list[i] , samplerate = s_rate_list[i] ,
-                                     winlen = winstep, winstep = winstep, nfilt=freq_bins, nfft=1024)
+                                    winlen = winstep, winstep = winstep, nfilt=freq_bins, nfft=1024)
+
+            #New adaptable version
+            #DOES NOT WORK FULLY, USES TRUNCATION DUE TO LOW NFFT
+            #frame_len = int(len(sound_list[i]) / (timeframes - 1))
+            #FFT_size = frame_len + (len(sound_list[i]) / (
+            #        timeframes - 1))  # This is the new calculated version
+            #FFT_size = int(FFT_size / 2) * 2
+            #all_results[i] = logfbank(sound_list[i] , samplerate = s_rate_list[i] ,
+            #                         winlen = FFT_size, winstep = frame_len, nfilt=freq_bins, nfft=FFT_size)
         return np.array(all_results)
 
 
