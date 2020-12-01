@@ -3,7 +3,17 @@ import argparse
 import numpy as np
 import timeit
 
+from utils.model.train import Trainer
+
 from models.speechmodel import SpeechModel
+
+def train_model(model, data_path):
+    # Initialize the trainer with the path pointing to data on disk
+    trainer = Trainer(data_path)
+    # Set the trainer for the model
+    model.set_trainer(trainer)
+    # Fit the model
+    model.fit(epochs=2)
 
 def getArgs():
     """ Parse command line arguemnts """
@@ -45,7 +55,14 @@ if __name__=='__main__':
         model.load_weights(path=CONFIGS.load_weights)
     
     if CONFIGS.train:
-        raise NotImplementedError('Training not implemented')
+        # Check if specific path to data is provided
+        if CONFIGS.datapath:
+            path = CONFIGS.datapath
+        # Else use hardcoded default
+        else:
+            path = "src/utils/data/own_tidigit_train_results.npy"
+
+        train_model(model, path)
 
     if CONFIGS.freeze:
         # Freeze model
