@@ -253,6 +253,16 @@ class SpeechModel():
         Array must be of same shape as weights in convolutional layer. """
         raise NotImplementedError("Loading weights is not yet implemented.")
 
+    def set_trainer(self, trainer):
+        """ Set the trainer instance for fitting the model. Has to be done 
+        before calling `model.fit()` """
+
+        if not trainer.datashape == self.input_layer.input_shape:
+            raise ValueError("The data in the trainer has a different shape than what this model was initialized for. Data shape: {}, Internal shape: {}"
+                .format(trainer.datashape, self.input_layer.input_shape))
+
+        self.trainer = trainer
+
     def freeze(self):
         """ Freeze the model weights to disable STDP learning when input is 
         fed to the model. """
