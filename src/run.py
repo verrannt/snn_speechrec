@@ -13,6 +13,9 @@ def getArgs():
     parser.add_argument("--train", 
                         action='store_true',
                         help='Run training')
+    parser.add_argument("--test", 
+                        action='store_true',
+                        help='Run testing')
     parser.add_argument("--dummy_test", 
                         action='store_true',
                         help='Dummy test network and record time')
@@ -51,3 +54,6 @@ if __name__=='__main__':
     if CONFIGS.dummy_test:
         # Test speed
         model.time_test(n_trials=1, n_timesteps=20)
+
+    if CONFIGS.test:
+        raise NotImplementedError('Testing not implemented.')
