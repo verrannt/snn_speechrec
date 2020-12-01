@@ -36,12 +36,11 @@ if __name__=='__main__':
 
     CONFIGS = getArgs()
 
-    # Init model
     model = SpeechModel(input_shape = (41,40))
 
     if CONFIGS.load_weights:
         model.load_weights(path=CONFIGS.load_weights)
-
+    
     if CONFIGS.train:
         raise NotImplementedError('Training not implemented')
 
@@ -51,4 +50,4 @@ if __name__=='__main__':
 
     if CONFIGS.dummy_test:
         # Test speed
-        model.time_test(n_trials=10, n_timesteps=20)
+        model.time_test(n_trials=1, n_timesteps=20)
