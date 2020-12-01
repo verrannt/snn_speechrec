@@ -31,7 +31,8 @@ if __name__=='__main__':
     CONFIGS = getArgs()
 
     if CONFIGS.train:
-        print('Training not implemented')
+        model = SpeechModel(input_shape = (41,40))
+        model.time_test(n_trials=1, n_timesteps=20)
 
     if CONFIGS.dummy_test:
         # Init model
