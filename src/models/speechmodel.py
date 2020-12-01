@@ -14,7 +14,7 @@ class InputLayer():
         if mfsc_input.shape != self.input_shape:
             raise ValueError()
     
-        pass
+        raise NotImplementedError("Calling input layer on MFSC frames is not yet implemented.")
         
     def dummy_call(self, n_timesteps):
         """ Return list of `n_timesteps` of `self.shape` sized matrices that
@@ -282,8 +282,8 @@ class SpeechModel():
         self.conv_layer.reset()
         self.pooling_layer.reset()
         
-        # Get the spike iterator from the input layer
-        spike_frames = self.input_layer.dummy_call(n_timesteps=10)
+        # Get the spike representations from the input layer
+        spike_frames = self.input_layer(input_mfsc)
         
         # Iterate through matrices of binary spikes
         conv_spikes = []
@@ -320,3 +320,41 @@ class SpeechModel():
         time = timeit.timeit(run, number=n_trials)
         
         print('Total time: {:.3f}s, Average: {:.3f}s'.format(time,time/n_trials))
+
+    def fit(self, epochs):
+        """ Fit the model using data provided by the trainer """
+
+        if not self.trainer:
+            raise ValueError("This model does not have a trainer yet. \
+                Initialize a Trainer instance and pass it to the model \
+                with `model.set_trainer(trainer)`")
+
+        print("Fitting model on {} images".format(self.trainer.datasize))
+
+        # Check if weights are frozen
+        if not self.conv_layer.is_training:
+            self.conv_layer.is_training = True
+            print("WARNING: model weights were automatically unfrozen")
+
+        # Collect the membrane potentials of the pooling layer for all images
+        # in all epochs
+        potentials = np.empty((
+            epochs, 
+            self.trainer.datasize, 
+            self.pooling_layer.output_shape[0], 
+            self.pooling_layer.output_shape[1]))
+
+        # Iterate through all epochs
+        for epoch in range(epochs):
+            print("\nEpoch {}/{}".format(epoch+1, epochs))
+
+            # Reset the trainer at the start of each epoch (i.e. index = 0)
+            self.trainer.reset()
+
+            # Iterate through the data in the trainer
+            for i in range(self.trainer.datasize):
+                print("Processing image {}/{}".format(i+1, self.trainer.datasize))
+                potentials[epoch,i] = self.run_on_image(self.trainer.next())
+                
+        print("\nDone.")
+        return potentials
