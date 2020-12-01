@@ -1,8 +1,8 @@
 import numpy as np
 
 class InputLayer():
-    def __init__(self, shape):
-        self.shape = shape
+    def __init__(self, input_shape):
+        self.input_shape = input_shape
     
     # TODO Implement conversion of MFSC spectograms to spikes
     def __call__(self, mfsc_input):
@@ -11,7 +11,7 @@ class InputLayer():
         """
         
         # Check shape of inputs
-        if mfsc_input.shape != self.shape:
+        if mfsc_input.shape != self.input_shape:
             raise ValueError()
     
         pass
@@ -20,7 +20,7 @@ class InputLayer():
         """ Return list of `n_timesteps` of `self.shape` sized matrices that
         contain random spikes for neurons """
 
-        return [np.random.choice(a=[1., 0.], size=self.shape, p=[0.01, 0.99])
+        return [np.random.choice(a=[1., 0.], size=self.input_shape, p=[0.20, 0.80])
             for _ in range(n_timesteps)]
 
 # TODO Implement STDP learning in the conv layer. I have tried a little bit
@@ -64,12 +64,12 @@ class ConvLayer():
         # Compute shape of the convolutional layer depending
         # on the shape of the input layer and size of the 
         # convolutional windows
-        self.shape = (input_shape[0]-window_size+1, n_featuremaps)
+        self.output_shape = (input_shape[0]-window_size+1, n_featuremaps)
         
         # Since we share weights between several neurons inside of a feature
         # map, the number of the convolutional windows we need to define is
         # reduced; it depends on how many neurons at once share weights
-        self.n_windows_per_feature = self.shape[0] // sharing_size
+        self.n_windows_per_feature = self.output_shape[0] // sharing_size
         
         # Initialize the weights from a Gaussian distribution. This includes 
         # the weights for each convolutional window, so it can be seen as a 
@@ -87,12 +87,12 @@ class ConvLayer():
         
         # Membrane voltages, i.e. the internal state of every neuron in 
         # this layer
-        self.membrane_voltages = np.zeros(self.shape)
+        self.membrane_voltages = np.zeros(self.output_shape)
 
         #Record the spiking history of the input neurons, to do STDP
         self.input_spike_history = np.zeros(self.input_shape)
-        self.allowed_to_spike = np.ones(self.shape)
-        self.allowed_to_learn = np.ones(self.shape)
+        self.allowed_to_spike = np.ones(self.output_shape)
+        self.allowed_to_learn = np.ones(self.output_shape)
         
         # Parameters for Integrate-and-Fire neurons
         self.v_thresh = 28.0
@@ -131,11 +131,11 @@ class ConvLayer():
         #Update the history of input spikes with the spikes in the current timestep
         self.input_spike_history += spikes
 
-        output_spikes = np.zeros(self.shape, dtype=bool)
+        output_spikes = np.zeros(self.output_shape, dtype=bool)
            
         # Record spikes and update weights
-        for row in range(self.shape[0]):
-            for col in range(self.shape[1]):
+        for row in range(self.output_shape[0]):
+            for col in range(self.output_shape[1]):
                 
                 # Update membrane potential if not inhibited
                 self.membrane_voltages[row,col] += self.allowed_to_spike[row,col] * np.sum(np.multiply(
@@ -182,21 +182,60 @@ class ConvLayer():
     
     def reset(self):
         """ Reset all internal states for a new input sample. """
-        self.membrane_voltages = np.zeros(self.shape)
+        self.membrane_voltages = np.zeros(self.output_shape)
         self.input_spike_history = np.zeros(self.input_shape)
-        self.allowed_to_spike = np.ones(self.shape)
-        self.allowed_to_learn = np.ones(self.shape)
+        self.allowed_to_spike = np.ones(self.output_shape)
+        self.allowed_to_learn = np.ones(self.output_shape)
         self.delta_weight = 0
 
-# TODO Implement pooling layer
 class PoolingLayer():
-    """ The pooling layer yet to be implemented. """
     
-    def __init__(self):
-        pass
+    def __init__(self, input_shape, pooling_size:int=4):
+        """
+        Pooling layer that sums spikes of the convolutional layer over timesteps. Doesn't reset potentials until the next sample occurs.
+
+        Parameters
+        ----------
+        input_shape:
+            Shape of the input layer connected to this layer
+        pooling_size:
+            Size of the pooling window
+        """
+
+        self.input_shape = input_shape
+        self.pooling_size = pooling_size
+        self.output_shape = (int(input_shape[0]/pooling_size), input_shape[1])
+
+        # Membrane voltages, i.e. the internal state of every neuron in
+        # this layer
+        self.membrane_voltages = np.zeros(self.output_shape)
     
     def __call__(self, spikes):
-        pass
+        """
+        Call the pooling layer on spikes from the convolutional layer. It
+        computes the membrane potentials of each neuron in the pooling layer with weights of 1.
+
+        Parameters
+        ----------
+        spikes: 2-D binary Numpy array corresponding to spike coordinates
+             in the convolutional layer.
+
+        Returns
+        -------
+        membrane_voltages: 2-D Numpy array corresponding to summed number of spikes
+            in the convolutional layer.
+        """
+        #Summing over all timesteps
+        summed = np.sum(spikes, axis=0)
+        #Pooling step:
+        for step in range(0, summed.shape[0], self.pooling_size):
+            self.membrane_voltages[int(step/self.pooling_size)] = np.sum(summed[step:step+self.pooling_size], axis=0)
+        print(self.membrane_voltages)
+        return self.membrane_voltages
+
+    def reset(self):
+        """ Reset all internal states for a new input sample. """
+        self.membrane_voltages = np.zeros(self.output_shape)
     
 class SpeechModel():
     """ The main model that implements the different layers
@@ -207,7 +246,7 @@ class SpeechModel():
         # Initialize the different layers
         self.input_layer = InputLayer(input_shape)
         self.conv_layer = ConvLayer(input_shape)
-        self.pooling_layer = PoolingLayer()
+        self.pooling_layer = PoolingLayer(self.conv_layer.output_shape)
         
     def freeze(self):
         """ Freeze the model weights to disable STDP learning when input is 
@@ -220,32 +259,24 @@ class SpeechModel():
         self.conv_layer.is_training = True
 
     def run_on_image(self, input_mfsc):
-        """ Run the SpeechModel on a single MFSC spectrogram. Returns a list 
+        """ Run the SpeechModel on a single MFSC spectrogram without learning. Returns a list
         of membrane potentials of all neurons in the last layer (PoolingLayer).
         """
         
         # Reset layers
         self.conv_layer.reset()
+        self.pooling_layer.reset()
         
         # Get the spike iterator from the input layer
         spike_frames = self.input_layer.dummy_call(n_timesteps=10)
         
-        # Collect membrane potentials from pooling layer
-        # that are used as embeddings for t-SNE
-        membrane_potentials = np.empty(len(spike_frames))
-        
         # Iterate through matrices of binary spikes
-        for i, spikes in enumerate(spike_frames):
-            # Feed spikes into conv layer 
-            spikes = self.conv_layer(spikes)
+        conv_spikes = []
+        for spikes in spike_frames:
+            conv_spikes.append(self.conv_layer(spikes))
             
-            # NOTE Right now the pooling layer only returns None-types because
-            # it's not yet implemented
-            membrane_potentials[i] = self.pooling_layer(spikes)
-
-        #@TODO Stop training when weight update is so small enough
-            
-        return membrane_potentials
+        pooling_potentials = self.pooling_layer(conv_spikes)
+        return pooling_potentials
 
     def time_test(self, n_trials, n_timesteps):
         """ Test execution time of network using dummy calls on the input 
@@ -261,13 +292,15 @@ class SpeechModel():
         # A single run on the network
         def run():
             self.conv_layer.reset()
+            self.pooling_layer.reset()
             conv_spikes = []
             for spikes in spike_frames:
-                print('iets randoms')
                 conv_spikes.append(self.conv_layer(spikes))
             if self.conv_layer.is_training and self.conv_layer.delta_weight < 0.01:
                 print('Training stopped because weight changes became insufficient')
                 self.conv_layer.is_training = False
+            pooling_potentials = self.pooling_layer(conv_spikes)
+            #Classifier should work on these pooling_spikes
         # Record time for `n_trials` trials
         time = timeit.timeit(run, number=n_trials)
         

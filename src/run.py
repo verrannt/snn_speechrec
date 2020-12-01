@@ -42,4 +42,4 @@ if __name__=='__main__':
         model.freeze()
 
         # Test speed
-        model.time_test(n_trials=10, n_timesteps=20)
+        model.time_test(n_trials=1, n_timesteps=20)
