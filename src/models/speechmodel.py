@@ -192,7 +192,8 @@ class PoolingLayer():
     
     def __init__(self, input_shape, pooling_size:int=4):
         """
-        Pooling layer that sums spikes of the convolutional layer over timesteps. Doesn't reset potentials until the next sample occurs.
+        Pooling layer that sums spikes of the convolutional layer over 
+        timesteps. Doesn't reset potentials until the next sample occurs.
 
         Parameters
         ----------
@@ -274,8 +275,10 @@ class SpeechModel():
         self.conv_layer.is_training = True
 
     def run_on_image(self, input_mfsc):
-        """ Run the SpeechModel on a single MFSC spectrogram without learning. Returns a list
-        of membrane potentials of all neurons in the last layer (PoolingLayer).
+        """ Run the SpeechModel on a single MFSC spectrogram frame. Returns a 
+        list of membrane potentials of all neurons in the last layer 
+        (PoolingLayer). Whether the model is learning while performing on this
+        image depends on whether the weights are frozen or not.
         """
         
         # Reset layers
