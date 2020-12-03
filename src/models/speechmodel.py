@@ -5,7 +5,7 @@ class InputLayer():
         self.shape = shape
     
     # TODO Implement conversion of MFSC spectograms to spikes
-    def __call__(self, mfsc_input):
+    def __call__(self, mfsc_input, n_time_options):
         """ Compute time-to-first-spike array from MFSC spectrogram and return
         it as list of 2-D binary spike matrices for discrete timesteps
         """
@@ -13,8 +13,17 @@ class InputLayer():
         # Check shape of inputs
         if mfsc_input.shape != self.shape:
             raise ValueError()
-    
-        pass
+
+        minimum = np.amin(mfsc_input)
+        maximum = np.amax(mfsc_input) +1 #+1 such that max value also fits.
+        width = (maximum - minimum)/n_time_options
+        ranges = self.make_ranges(minimum, width, n_time_options)
+        converted = np.zeros((n_time_options, np.shape(mfsc_input)[0], np.shape(mfsc_input)[1]))
+        for ind1,item in enumerate(mfsc_input):
+            for ind2,item2 in enumerate(item):
+                value = self.find_range(item2,ranges)
+                converted[value,ind1,ind2] = 1
+        return converted
         
     def dummy_call(self, n_timesteps):
         """ Return list of `n_timesteps` of `self.shape` sized matrices that
@@ -22,6 +31,19 @@ class InputLayer():
 
         return [np.random.choice(a=[1., 0.], size=self.shape, p=[0.01, 0.99])
             for _ in range(n_timesteps)]
+
+    def make_ranges(self, min, size, amount):
+        ranges = []
+        for range_min in range(min,
+                         min + amount * size + 1, size):
+            ranges.append((range_min, range_min +size))
+        return ranges
+
+    def find_range(self, value, ranges):
+        for i in range(0, len(ranges)):
+            if ranges[i][0] <= value < ranges[i][1]:
+                return i
+        return -1 #A dummy value, a range should always be found
 
 # TODO Implement STDP learning in the conv layer. I have tried a little bit
 # and you will find some updates using traces but that so far fail because of
