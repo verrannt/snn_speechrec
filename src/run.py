@@ -3,20 +3,21 @@ import argparse
 import numpy as np
 import timeit
 
-from utils.model.train import Trainer
-
 from models.speechmodel import SpeechModel
+from utils.model.train import Trainer
 
 def train_model(model, data_path):
     # Initialize the trainer with the path pointing to data on disk
-    trainer = Trainer(data_path)
-    # Set the trainer for the model
-    model.set_trainer(trainer)
+    trainer = Trainer(data_path, validation_split=0.2)
+    # Set the model for the trainer
+    trainer.set_model(model)
     # Fit the model
-    model.fit(epochs=2)
+    trainer.fit(epochs=2)
+    # Get fitted model from trainer
+    return trainer.model
 
 def test_model(model, data_path, label_path):
-    model.unfreeze()
+    model.freeze()
     pass
 
 def getArgs():
@@ -69,7 +70,7 @@ if __name__=='__main__':
         else:
             path = "src/utils/data/own_tidigit_train_results.npy"
 
-        train_model(model, path)
+        model = train_model(model, path)
 
     if CONFIGS.freeze:
         # Freeze model

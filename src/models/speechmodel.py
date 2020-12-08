@@ -254,16 +254,6 @@ class SpeechModel():
         Array must be of same shape as weights in convolutional layer. """
         raise NotImplementedError("Loading weights is not yet implemented.")
 
-    def set_trainer(self, trainer):
-        """ Set the trainer instance for fitting the model. Has to be done 
-        before calling `model.fit()` """
-
-        if not trainer.datashape == self.input_layer.input_shape:
-            raise ValueError("The data in the trainer has a different shape than what this model was initialized for. Data shape: {}, Internal shape: {}"
-                .format(trainer.datashape, self.input_layer.input_shape))
-
-        self.trainer = trainer
-
     def freeze(self):
         """ Freeze the model weights to disable STDP learning when input is 
         fed to the model. """
@@ -274,7 +264,7 @@ class SpeechModel():
         fed to the model. """
         self.conv_layer.is_training = True
 
-    def run_on_image(self, input_mfsc):
+    def __call__(self, input_mfsc):
         """ Run the SpeechModel on a single MFSC spectrogram frame. Returns a 
         list of membrane potentials of all neurons in the last layer 
         (PoolingLayer). Whether the model is learning while performing on this
@@ -323,54 +313,3 @@ class SpeechModel():
         time = timeit.timeit(run, number=n_trials)
         
         print('Total time: {:.3f}s, Average: {:.3f}s'.format(time,time/n_trials))
-
-    def fit(self, epochs):
-        """ Fit the model using data provided by the trainer """
-
-        if not self.trainer:
-            raise ValueError("This model does not have a trainer yet. \
-                Initialize a Trainer instance and pass it to the model \
-                with `model.set_trainer(trainer)`")
-
-        print("Fitting model on {} images".format(self.trainer.datasize))
-
-        # Check if weights are frozen
-        if not self.conv_layer.is_training:
-            self.conv_layer.is_training = True
-            print("WARNING: model weights were automatically unfrozen")
-
-        # Collect the membrane potentials of the pooling layer for all images
-        # in all epochs
-        train_potentials = np.empty((
-            epochs, 
-            self.trainer.trainize, 
-            self.pooling_layer.output_shape[0], 
-            self.pooling_layer.output_shape[1]))
-        val_potentials = np.empty((
-            epochs, 
-            self.trainer.valsize, 
-            self.pooling_layer.output_shape[0], 
-            self.pooling_layer.output_shape[1]))
-
-        # Iterate through all epochs
-        for epoch in range(epochs):
-            print("\nEpoch {}/{}".format(epoch+1, epochs))
-
-            # Reset the trainer at the start of each epoch (i.e. index = 0)
-            self.trainer.reset()
-
-            # Iterate through the data in the trainer
-            for i in range(self.trainer.datasize):
-                print("Processing image {}/{}\r".format(i+1, self.trainer.datasize), end="")
-                train_potentials[epoch,i] = self.run_on_image(self.trainer.next())
-                
-            # Validate on the validation data
-            self.freeze()
-            for i in range(self.trainer.valsize):
-                print("Validating {}/{}\r".format(i+1, self.trainer.valsize), end="")
-                val_potentials[epoch,i] = self.run_on_image(self.trainer.valnext())
-                # TODO Implement categorization with SVM on the potentials
-            self.unfreeze()
-
-        print("\nDone.")
-        return potentials
