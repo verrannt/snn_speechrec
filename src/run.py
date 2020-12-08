@@ -15,6 +15,10 @@ def train_model(model, data_path):
     # Fit the model
     model.fit(epochs=2)
 
+def test_model(model, data_path, label_path):
+    model.unfreeze()
+    pass
+
 def getArgs():
     """ Parse command line arguemnts """
 
@@ -38,6 +42,9 @@ def getArgs():
     parser.add_argument("-d", "--datapath", 
                         type=str,
                         help="Path to train set")
+    parser.add_argument("--labels", "--labelpath",
+                        type=str,
+                        help="Path to labels matching train data")
     parser.add_argument("-v", "--verbose", 
                         dest='verbose', 
                         action='store_true', 
@@ -73,4 +80,7 @@ if __name__=='__main__':
         model.time_test(n_trials=1, n_timesteps=20)
 
     if CONFIGS.test:
-        raise NotImplementedError('Testing not implemented.')
+        # Check whether both paths provided
+        if not (CONFIGS.datapath and CONFIGS.labelpath):
+            raise ValueError("Both `--datapath` and `--labelpath` need to be provided and correspond to the same data.")
+        test_model(model, CONFIGS.datapath, CONFIGS.labelpath)
