@@ -1,8 +1,10 @@
 import traceback
+import time
 
 import numpy as np
 
 from ..data.mfsc import result_handler
+from ..generic import ProgressNotifier
 
 class Trainer():
     """ 
@@ -20,6 +22,11 @@ class Trainer():
         self.valindex = 0
 
         self.read_data()
+
+        self.train_prog = ProgressNotifier(
+            title='Training', total=self.trainsize)
+        self.val_prog = ProgressNotifier(
+            title='Validating', total=self.valsize, show_bar=False)
 
     def read_data(self):
         """ Read the data from storage. Get size of the dataset (i.e. number
@@ -65,6 +72,9 @@ class Trainer():
 
         # Increase the index
         self.trainindex += 1
+                
+        # Update the training progress notifier
+        self.train_prog.update()
 
         return image
 
@@ -83,12 +93,18 @@ class Trainer():
         # Increase the index
         self.valindex += 1
 
+        # Update the validation progress notifier
+        self.val_prog.update()
+
         return image
 
     def reset(self):
-        """ Reset indexes to zero. """
+        """ Reset indexes to zero and reset the progress notifiers. """
         self.trainindex = 0
         self.valindex = 0
+        
+        self.train_prog.reset()
+        self.val_prog.reset()
 
     def set_model(self, model):
         """ Set the model instance for fitting. Has to be done 
@@ -129,23 +145,30 @@ class Trainer():
         # Iterate through all epochs
         for epoch in range(epochs):
             print("\nEpoch {}/{}".format(epoch+1, epochs))
+            start_time = time.time()
 
             # Reset the trainer at the start of each epoch (i.e. index = 0)
+            # Also resets progress notifiers
             self.reset()
 
-            # Iterate through the data in the trainer
+            # TRAIN on the training data
             for i in range(self.trainsize):
-                print("Processing {}/{}\r".format(i+1, self.trainsize), end="")
                 train_potentials[epoch,i] = self.model(self.next())
                 
-            # Validate on the validation data
+            print()
+
+            # VALIDATE on the validation data
             self.model.freeze()
             for i in range(self.valsize):
-                print("Validating {}/{}\r".format(i+1, self.valsize), end="")
                 val_potentials[epoch,i] = self.model(self.valnext())
                 # TODO Implement categorization with SVM on the potentials
             self.model.unfreeze()
 
-        print("\nDone.")
-        return potentials
+            # Print elapsed time
+            end_time = time.time()
+            elapsed_time = end_time-start_time
+            print('\nElapsed time {:02}:{:.2f}'
+                .format(int(elapsed_time/60), elapsed_time%60))
 
+        print("\nDone.")
+        return train_potentials, val_potentials
