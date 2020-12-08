@@ -138,7 +138,7 @@ class MFSC_Converter():
             #Winlen should be same as fft, winstep should be window length
             #NOTE: Change calculation of winstep too.
             all_results[i] = logfbank(sound_list[i] , samplerate = s_rate_list[i] ,
-                                    winlen = winstep, winstep = winstep, nfilt=freq_bins, nfft=1024)
+                                    winlen = 1.1*winstep, winstep = winstep, nfilt=freq_bins, nfft=1024)
 
             #New adaptable version
             #DOES NOT WORK FULLY, USES TRUNCATION DUE TO LOW NFFT
