@@ -356,7 +356,7 @@ class SpeechModel():
 
             # Iterate through the data in the trainer
             for i in range(self.trainer.datasize):
-                print("Processing image {}/{}".format(i+1, self.trainer.datasize))
+                print("Processing image {}/{}\r".format(i+1, self.trainer.datasize), end="")
                 potentials[epoch,i] = self.run_on_image(self.trainer.next())
                 
         print("\nDone.")
