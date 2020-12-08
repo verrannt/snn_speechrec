@@ -341,9 +341,14 @@ class SpeechModel():
 
         # Collect the membrane potentials of the pooling layer for all images
         # in all epochs
-        potentials = np.empty((
+        train_potentials = np.empty((
             epochs, 
-            self.trainer.datasize, 
+            self.trainer.trainize, 
+            self.pooling_layer.output_shape[0], 
+            self.pooling_layer.output_shape[1]))
+        val_potentials = np.empty((
+            epochs, 
+            self.trainer.valsize, 
             self.pooling_layer.output_shape[0], 
             self.pooling_layer.output_shape[1]))
 
@@ -357,7 +362,15 @@ class SpeechModel():
             # Iterate through the data in the trainer
             for i in range(self.trainer.datasize):
                 print("Processing image {}/{}\r".format(i+1, self.trainer.datasize), end="")
-                potentials[epoch,i] = self.run_on_image(self.trainer.next())
+                train_potentials[epoch,i] = self.run_on_image(self.trainer.next())
                 
+            # Validate on the validation data
+            self.freeze()
+            for i in range(self.trainer.valsize):
+                print("Validating {}/{}\r".format(i+1, self.trainer.valsize), end="")
+                val_potentials[epoch,i] = self.run_on_image(self.trainer.valnext())
+                # TODO Implement categorization with SVM on the potentials
+            self.unfreeze()
+
         print("\nDone.")
         return potentials
