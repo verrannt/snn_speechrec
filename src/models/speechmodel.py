@@ -37,8 +37,6 @@ class InputLayer():
     def make_ranges(self, min, size, amount):
         ranges = []
         for range_min in range(min,
-
-        return -1 #A dummy value, a range should always be found
                          min + amount * size + 1, size):
             ranges.append((range_min, range_min +size))
         return ranges
@@ -253,7 +251,6 @@ class PoolingLayer():
         for step in range(0, summed.shape[0], self.pooling_size):
             self.membrane_voltages[int(step / self.pooling_size)] = np.sum(summed[step:step + self.pooling_size],
                                                                            axis=0)
-        print(self.membrane_voltages)
         return self.membrane_voltages
 
     def reset(self):
@@ -309,7 +306,7 @@ class SpeechModel():
         self.pooling_layer.reset()
         
         # Get the spike representations from the input layer
-        spike_frames = self.input_layer(input_mfsc)
+        spike_frames = self.input_layer(input_mfsc, n_time_options=20)
         
         # Iterate through matrices of binary spikes
         conv_spikes = []
