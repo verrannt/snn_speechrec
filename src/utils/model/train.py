@@ -2,6 +2,7 @@ import traceback
 import time
 
 import numpy as np
+from sklearn import svm
 
 from ..data.mfsc import result_handler
 from ..data.io import load_labels
@@ -87,9 +88,6 @@ class Trainer():
         # Increase the index
         self.trainindex += 1
                 
-        # Update the training progress notifier
-        self.train_prog.update()
-
         return image
 
     def valnext(self):
@@ -106,9 +104,6 @@ class Trainer():
 
         # Increase the index
         self.valindex += 1
-
-        # Update the validation progress notifier
-        self.val_prog.update()
 
         return image
 
@@ -166,16 +161,27 @@ class Trainer():
             self.reset()
 
             # TRAIN on the training data
+            score = 'Nan'
             for i in range(self.trainsize):
                 train_potentials[epoch,i] = self.model(self.next())
+                if (i+1) % 100 == 0:
+                    clf = svm.SVC()
+                    clf = clf.fit(val_potentials[epoch, i-9:i+1].reshape(10,9*50), self.vallabels[i-9:i+1])
+                    score = clf.score(val_potentials[epoch, i-9:i+1].reshape(10,9*50), self.vallabels[i-9:i+1])
+                self.train_prog.update({'Accuracy':score})
                 
             print()
 
             # VALIDATE on the validation data
+            score = 'Nan'
             self.model.freeze()
             for i in range(self.valsize):
                 val_potentials[epoch,i] = self.model(self.valnext())
-                # TODO Implement categorization with SVM on the potentials
+                if (i+1) % 100 == 0:
+                    clf = svm.SVC()
+                    clf = clf.fit(val_potentials[epoch, i-9:i+1].reshape(10,9*50), self.vallabels[i-9:i+1])
+                    score = clf.score(val_potentials[epoch, i-9:i+1].reshape(10,9*50), self.vallabels[i-9:i+1])
+                self.val_prog.update({'Accuracy':score})
             self.model.unfreeze()
 
             # Print elapsed time
