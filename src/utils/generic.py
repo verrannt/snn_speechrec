@@ -25,7 +25,8 @@ class ProgressNotifier():
     def reset(self):
         self.current = 1
 
-    def update(self):
+    def update(self, metrics:dict={}):
+
         fraction = float(self.current) / self.total
         n_done = int(fraction*self.bar_len)
 
@@ -44,11 +45,18 @@ class ProgressNotifier():
             bar += ('.' * (self.bar_len - n_done))
             bar += ']'
 
+        # Add fraction as percentage
         bar += (' {}%'.format(int(fraction*100)))
+
+        # Add metrics
+        if metrics != {}:
+            bar += ' |'
+            for key in metrics.keys():
+                bar += ' {}: {}'.format(key, metrics[key])
 
         self.current += 1
         
-        sys.stdout.write('\b' * self.total)
+        sys.stdout.write('\b' * 200)#self.total)
         sys.stdout.write('\r')
         sys.stdout.write(bar)
         sys.stdout.flush()
