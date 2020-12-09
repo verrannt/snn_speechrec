@@ -4,6 +4,7 @@ import time
 import numpy as np
 
 from ..data.mfsc import result_handler
+from ..data.io import load_labels
 from ..generic import ProgressNotifier
 
 class Trainer():
@@ -13,9 +14,11 @@ class Trainer():
     itself, as to enable easy obtaining of single datapoints with trainer.next()
     """
 
-    def __init__(self, path, validation_split=0.2):
+    def __init__(self, datapath, labelpath, validation_split=0.2):
         """ Initialize the trainer with path to data stored on device """
-        self.path = path
+        self.datapath = datapath
+        self.labelpath = labelpath
+
         self.valsplit = validation_split
 
         self.trainindex = 0
@@ -33,7 +36,10 @@ class Trainer():
         of datapoints) and shape of a single datapoint that may be accessed
         from outside. """
 
-        data = result_handler().load_file(self.path)
+        data = result_handler().load_file(self.datapath)
+        labels = load_labels(self.labelpath)
+
+        assert data.shape[0] == labels.shape[0], "Non-matching amount of data and labels"
 
         # TODO This is only a temporary hard coded fix, because the data are
         # currently provided in a transposed manner. Hence, we need to trans-
@@ -43,20 +49,28 @@ class Trainer():
             new_data[i] = data[i].T
         data = new_data
 
+        # Get data shape
         self.datashape = (data.shape[1], data.shape[2])
         print("Read {} datapoints from storage with shape {}x{}"
             .format(data.shape[0], data.shape[1], data.shape[2]))
 
+        # Get size of data and compute size of validation and training set 
+        # from provided validation split
         datasize = data.shape[0]
         self.valsize = int(datasize * self.valsplit)
         self.trainsize = datasize - self.valsize
 
+        # Randomly choose indices for validation and training set 
+        # corresponding to previously defined sizes
         val_indices = np.random.choice(
             data.shape[0], self.valsize, replace=False)
         train_indices = np.delete(np.arange(datasize), val_indices)
         
+        # Get the data and labels
         self.valdata = data[val_indices]
         self.traindata = data[train_indices]
+        self.vallabels = labels[val_indices]
+        self.trainlabels = labels[val_indices]
 
     def next(self):
         """ Get the datapoint for the training data at the current index and 

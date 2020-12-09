@@ -6,9 +6,12 @@ import timeit
 from models.speechmodel import SpeechModel
 from utils.model.train import Trainer
 
-def train_model(model, data_path):
+def train_model(model, datapath, labelpath):
     # Initialize the trainer with the path pointing to data on disk
-    trainer = Trainer(data_path, validation_split=0.2)
+    trainer = Trainer(
+        datapath=datapath, 
+        labelpath=labelpath,
+        validation_split=0.2)
     # Set the model for the trainer
     trainer.set_model(model)
     # Fit the model
@@ -37,13 +40,13 @@ def getArgs():
     parser.add_argument("--freeze",
                         action='store_true',
                         help='Freeze model parameters (i.e. no STDP)')
-    parser.add_argument("-l", "--load_weights", 
+    parser.add_argument("-w", "--load_weights", 
                         type=str,
                         help="Path to weights stored as numpy array file.")
     parser.add_argument("-d", "--datapath", 
                         type=str,
                         help="Path to train set")
-    parser.add_argument("--labels", "--labelpath",
+    parser.add_argument("-l", "--labelpath",
                         type=str,
                         help="Path to labels matching train data")
     parser.add_argument("-v", "--verbose", 
@@ -64,13 +67,15 @@ if __name__=='__main__':
     
     if CONFIGS.train:
         # Check if specific path to data is provided
-        if CONFIGS.datapath:
-            path = CONFIGS.datapath
+        if CONFIGS.datapath and CONFIGS.labelpath:
+            datapath = CONFIGS.datapath
+            labelpath = CONFIGS.labelpath
         # Else use hardcoded default
         else:
-            path = "src/utils/data/own_tidigit_train_results.npy"
+            datapath = "src/utils/data/own_timit_train_results.npy"
+            labelpath = "data/TIMIT/train_data.csv"
 
-        model = train_model(model, path)
+        model = train_model(model, datapath, labelpath)
 
     if CONFIGS.freeze:
         # Freeze model
