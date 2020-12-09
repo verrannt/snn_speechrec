@@ -167,8 +167,10 @@ class Trainer():
             # Print elapsed time
             end_time = time.time()
             elapsed_time = end_time-start_time
-            print('\nElapsed time {:02}:{:.2f}'
-                .format(int(elapsed_time/60), elapsed_time%60))
+            print('\nElapsed time {:02}:{:02}:{:02}'.format(
+                int(elapsed_time/60), 
+                int(elapsed_time%60), 
+                int(elapsed_time%60%1*100)))
 
         print("\nDone.")
         return train_potentials, val_potentials
