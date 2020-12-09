@@ -36,7 +36,7 @@ class InputLayer():
 
     def make_ranges(self, min, size, amount):
         ranges = []
-        for range_min in range(min,
+        for range_min in np.arange(min,
                          min + amount * size + 1, size):
             ranges.append((range_min, range_min +size))
         return ranges
