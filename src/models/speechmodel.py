@@ -273,11 +273,13 @@ class SpeechModel():
     in itself and can be trained by running it on images.
     """
 
-    def __init__(self, input_shape):
+    def __init__(self, input_shape, n_time_options:int=50):
         # Initialize the different layers
         self.input_layer = InputLayer(input_shape)
         self.conv_layer = ConvLayer(input_shape)
         self.pooling_layer = PoolingLayer(self.conv_layer.output_shape)
+        # Set the amount of timesteps to unfold the input to
+        self.n_time_options = n_time_options
         
     def load_weights(self, path):
         """ Load weights for the model from a numpy array stored on disk.
@@ -306,7 +308,8 @@ class SpeechModel():
         self.pooling_layer.reset()
         
         # Get the spike representations from the input layer
-        spike_frames = self.input_layer(input_mfsc, n_time_options=20)
+        spike_frames = self.input_layer(
+            input_mfsc, n_time_options=self.n_time_options)
         
         # Iterate through matrices of binary spikes
         conv_spikes = []

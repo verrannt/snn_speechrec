@@ -57,7 +57,7 @@ if __name__=='__main__':
 
     CONFIGS = getArgs()
 
-    model = SpeechModel(input_shape = (41,40))
+    model = SpeechModel(input_shape = (41,40), n_time_options=20)
 
     if CONFIGS.load_weights:
         model.load_weights(path=CONFIGS.load_weights)
