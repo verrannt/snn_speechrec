@@ -76,7 +76,7 @@ if __name__=='__main__':
 
     CONFIGS = getArgs()
 
-    model = SpeechModel(input_shape = (41,40), n_time_options=1)
+    model = SpeechModel(input_shape = (41,40), n_time_options=30)
 
     weights_path = 'models/weights/'
 
