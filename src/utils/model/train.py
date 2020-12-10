@@ -168,6 +168,7 @@ class Trainer():
 
             # TRAIN on the training data
             score = 'Nan'
+            train_scores = []
             for i in range(self.trainsize):
                 train_potentials[epoch,i] = self.model(self.next())
                 if (i+1) % test_freq == 0:
@@ -180,12 +181,15 @@ class Trainer():
                         train_potentials[epoch, i-(test_freq-1):i+1]
                             .reshape(test_freq,9*50), 
                         self.trainlabels[i-(test_freq-1):i+1])
+                    train_scores.append(score)
                 self.train_prog.update({'Accuracy':score})
+            self.train_prog.update({'Mean Accuracy':np.mean(score)})
                 
             print()
 
             # VALIDATE on the validation data
             score = 'Nan'
+            val_scores = []
             self.model.freeze()
             for i in range(self.valsize):
                 val_potentials[epoch,i] = self.model(self.valnext())
@@ -199,7 +203,9 @@ class Trainer():
                         val_potentials[epoch, i-(test_freq-1):i+1]
                             .reshape(test_freq,9*50), 
                         self.vallabels[i-(test_freq-1):i+1])
+                    val_scores.append(score)
                 self.val_prog.update({'Accuracy':score})
+            self.val_prog.update({'Mean Accuracy':np.mean(val_scores)})
             self.model.unfreeze()
 
             # Print elapsed time
@@ -210,5 +216,5 @@ class Trainer():
                 int(elapsed_time%60), 
                 int(elapsed_time%60%1*100)))
 
-        print("\nDone.")
+        print("\nDone")
         return train_potentials, val_potentials
