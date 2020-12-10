@@ -71,7 +71,7 @@ class Trainer():
         self.valdata = data[val_indices]
         self.traindata = data[train_indices]
         self.vallabels = labels[val_indices]
-        self.trainlabels = labels[val_indices]
+        self.trainlabels = labels[train_indices]
 
     def next(self):
         """ Get the datapoint for the training data at the current index and 
