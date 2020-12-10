@@ -72,8 +72,8 @@ if __name__=='__main__':
             labelpath = CONFIGS.labelpath
         # Else use hardcoded default
         else:
-            datapath = "src/utils/data/own_timit_train_results.npy"
-            labelpath = "data/TIMIT/train_data.csv"
+            datapath = "src/utils/data/own_tidigit_train_results.npy"
+            labelpath = "data/Spike TIDIGITS/TIDIGIT_train.mat"
 
         model = train_model(model, datapath, labelpath)
 
