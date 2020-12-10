@@ -284,7 +284,13 @@ class SpeechModel():
     def load_weights(self, path):
         """ Load weights for the model from a numpy array stored on disk.
         Array must be of same shape as weights in convolutional layer. """
-        raise NotImplementedError("Loading weights is not yet implemented.")
+        with open(path, 'rb') as f:
+            self.conv_layer.weights == np.load(f)
+
+    def save_weights(self, path):
+        """ Save weights of the model as numpy array on disk. """
+        with open(path, 'wb') as f:
+            np.save(f, self.conv_layer.weights)
 
     def freeze(self):
         """ Freeze the model weights to disable STDP learning when input is 

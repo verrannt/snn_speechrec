@@ -6,7 +6,7 @@ import timeit
 from models.speechmodel import SpeechModel
 from utils.model.train import Trainer
 
-def train_model(model, datapath, labelpath):
+def train_model(model, datapath, labelpath, epochs):
     # Initialize the trainer with the path pointing to data on disk
     trainer = Trainer(
         datapath=datapath, 
@@ -15,9 +15,9 @@ def train_model(model, datapath, labelpath):
     # Set the model for the trainer
     trainer.set_model(model)
     # Fit the model
-    trainer.fit(epochs=2)
-    # Get fitted model from trainer
-    return trainer.model
+    train_potentials, val_potentials = trainer.fit(epochs=epochs)
+    # Get fitted model from trainer and return with potentials
+    return train_potentials, val_potentials, trainer.model
 
 def test_model(model, data_path, label_path):
     model.freeze()
@@ -29,30 +29,46 @@ def getArgs():
     parser = argparse.ArgumentParser(description="Interact with library.")
 
     parser.add_argument("--train", 
-                        action='store_true',
-                        help='Run training')
+                        type=int,
+                        nargs='?',
+                        const=1,
+                        help='Run training. If followed by integer, train the '
+                        'model for this amount of epochs. Otherwise, trains '
+                        'for one epoch only.')
     parser.add_argument("--test", 
                         action='store_true',
-                        help='Run testing')
+                        help='Run testing. Usually, you would provide saved '
+                        'weights to be loaded with the --load_weights flag, '
+                        'or run testing directly after training.')
     parser.add_argument("--dummy_test", 
                         action='store_true',
-                        help='Dummy test network and record time')
+                        help='Dummy test network and record time.')
     parser.add_argument("--freeze",
                         action='store_true',
-                        help='Freeze model parameters (i.e. no STDP)')
-    parser.add_argument("-w", "--load_weights", 
+                        help='Freeze model parameters (i.e. no STDP).')
+    parser.add_argument("--load", 
                         type=str,
-                        help="Path to weights stored as numpy array file.")
+                        help="Load weights from file stored as numpy array. "
+                        "Only provide name of the file (without .npy ending), "
+                        "path is hardcoded.")
+    parser.add_argument("--save", 
+                        type=str,
+                        help="Save weights and potentials stored as numpy "
+                        "array files. Only provide info about the run, e.g. "
+                        "`run1_epoch1`, the rest is hardcoded.")
     parser.add_argument("-d", "--datapath", 
                         type=str,
-                        help="Path to train set")
+                        help="Path to train set. If none is provided, will "
+                        "default to path hardcoded in this script.")
     parser.add_argument("-l", "--labelpath",
                         type=str,
-                        help="Path to labels matching train data")
+                        help="Path to labels matching train data. If none is "
+                        "provided, will default to path hardcoded in this "
+                        "script.")
     parser.add_argument("-v", "--verbose", 
                         dest='verbose', 
                         action='store_true', 
-                        help="Verbose mode")
+                        help="Verbose mode. Not supported right now.")
 
     return parser.parse_args()
 
@@ -60,10 +76,14 @@ if __name__=='__main__':
 
     CONFIGS = getArgs()
 
-    model = SpeechModel(input_shape = (41,40), n_time_options=20)
+    model = SpeechModel(input_shape = (41,40), n_time_options=1)
 
-    if CONFIGS.load_weights:
-        model.load_weights(path=CONFIGS.load_weights)
+    weights_path = 'models/weights/'
+
+    if CONFIGS.load:
+        model.load_weights(path='{}weights_{}.npy'.format(
+            weights_path, CONFIGS.load))
+        print('Loaded model weights')
     
     if CONFIGS.train:
         # Check if specific path to data is provided
@@ -75,7 +95,22 @@ if __name__=='__main__':
             datapath = "src/utils/data/own_tidigit_train_results.npy"
             labelpath = "data/Spike TIDIGITS/TIDIGIT_train.mat"
 
-        model = train_model(model, datapath, labelpath)
+        train_potentials, val_potentials, model = train_model(
+            model, datapath, labelpath, epochs=CONFIGS.train)
+
+    if CONFIGS.save:
+        model.save_weights(path='{}weights_{}.npy'.format(
+            weights_path, CONFIGS.save))
+        print('Saved model weights')
+        
+        # Save the membrane potentials
+        tp_filename = 'models/logs/train_potentials_{}.npy'.format(CONFIGS.save)
+        vp_filename = 'models/logs/val_potentials_{}.npy'.format(CONFIGS.save)
+        with open(tp_filename, 'wb') as f:
+            np.save(f, train_potentials)
+        with open(vp_filename, 'wb') as f:
+            np.save(f, train_potentials)
+        print('Saved potentials')
 
     if CONFIGS.freeze:
         # Freeze model
