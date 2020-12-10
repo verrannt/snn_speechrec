@@ -3,6 +3,7 @@ import time
 
 import numpy as np
 from sklearn import svm
+from sklearn.utils import shuffle
 
 from ..data.mfsc import result_handler
 from ..data.io import load_labels_from_mat
@@ -39,6 +40,7 @@ class Trainer():
 
         data = result_handler().load_file(self.datapath)
         labels = load_labels_from_mat(self.labelpath)
+        data, labels = shuffle(data, labels, random_state=0)
 
         assert data.shape[0] == labels.shape[0], \
             "Data and labels do not fit in shape"
