@@ -160,14 +160,22 @@ class Trainer():
             # Also resets progress notifiers
             self.reset()
 
+            test_freq = 100
+
             # TRAIN on the training data
             score = 'Nan'
             for i in range(self.trainsize):
                 train_potentials[epoch,i] = self.model(self.next())
-                if (i+1) % 100 == 0:
+                if (i+1) % test_freq == 0:
                     clf = svm.SVC()
-                    clf = clf.fit(val_potentials[epoch, i-9:i+1].reshape(10,9*50), self.vallabels[i-9:i+1])
-                    score = clf.score(val_potentials[epoch, i-9:i+1].reshape(10,9*50), self.vallabels[i-9:i+1])
+                    clf = clf.fit(
+                        train_potentials[epoch, i-(test_freq-1):i+1]
+                            .reshape(test_freq,9*50), 
+                        self.trainlabels[i-(test_freq-1):i+1])
+                    score = clf.score(
+                        train_potentials[epoch, i-(test_freq-1):i+1]
+                            .reshape(test_freq,9*50), 
+                        self.trainlabels[i-(test_freq-1):i+1])
                 self.train_prog.update({'Accuracy':score})
                 
             print()
@@ -177,10 +185,16 @@ class Trainer():
             self.model.freeze()
             for i in range(self.valsize):
                 val_potentials[epoch,i] = self.model(self.valnext())
-                if (i+1) % 100 == 0:
+                if (i+1) % test_freq == 0:
                     clf = svm.SVC()
-                    clf = clf.fit(val_potentials[epoch, i-9:i+1].reshape(10,9*50), self.vallabels[i-9:i+1])
-                    score = clf.score(val_potentials[epoch, i-9:i+1].reshape(10,9*50), self.vallabels[i-9:i+1])
+                    clf = clf.fit(
+                        val_potentials[epoch, i-(test_freq-1):i+1]
+                            .reshape(test_freq,9*50), 
+                        self.vallabels[i-(test_freq-1):i+1])
+                    score = clf.score(
+                        val_potentials[epoch, i-(test_freq-1):i+1]
+                            .reshape(test_freq,9*50), 
+                        self.vallabels[i-(test_freq-1):i+1])
                 self.val_prog.update({'Accuracy':score})
             self.model.unfreeze()
 
