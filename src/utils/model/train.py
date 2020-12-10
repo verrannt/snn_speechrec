@@ -5,7 +5,7 @@ import numpy as np
 from sklearn import svm
 
 from ..data.mfsc import result_handler
-from ..data.io import load_labels
+from ..data.io import load_labels_from_mat
 from ..generic import ProgressNotifier
 
 class Trainer():
@@ -38,9 +38,10 @@ class Trainer():
         from outside. """
 
         data = result_handler().load_file(self.datapath)
-        labels = load_labels(self.labelpath)
+        labels = load_labels_from_mat(self.labelpath)
 
-        assert data.shape[0] == labels.shape[0], "Non-matching amount of data and labels"
+        assert data.shape[0] == labels.shape[0], \
+            "Data and labels do not fit in shape"
 
         # TODO This is only a temporary hard coded fix, because the data are
         # currently provided in a transposed manner. Hence, we need to trans-
@@ -131,7 +132,8 @@ class Trainer():
         if not self.model:
             raise ValueError("Model is not set. Call `trainer.set_model()` with an appropriate model instance.")
         
-        print("Fitting model on {} images".format(self.trainsize))
+        print("Fitting model on {} images, validating on {} images"
+            .format(self.trainsize, self.valsize))
 
         # Check if weights are frozen
         if not self.model.conv_layer.is_training:
