@@ -1,0 +1,5 @@
+# This is a simple experiment log file where we can log hyperparameters and the like
+
+DATE       | RUN No.  | n_time_options | execution time | episodes | accuracy
+-----------------------------------------------------------------------------
+2020-12-10 | 1        | 45             | 2h 20 min      | 10       | 0.53

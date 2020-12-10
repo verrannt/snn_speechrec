@@ -20,10 +20,10 @@ class ProgressNotifier():
         self.title = title + ' '
         self.bar_len = bar_len
         self.show_bar = show_bar
-        self.current = 1
+        self.current = 0
 
     def reset(self):
-        self.current = 1
+        self.current = 0
 
     def update(self, metrics:dict={}):
 
@@ -52,7 +52,7 @@ class ProgressNotifier():
         if metrics != {}:
             bar += ' |'
             for key in metrics.keys():
-                bar += ' {}: {}'.format(key, metrics[key])
+                bar += ' {}: {:.2f}'.format(key, float(metrics[key]))
 
         self.current += 1
         

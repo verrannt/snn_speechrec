@@ -3,9 +3,10 @@ import time
 
 import numpy as np
 from sklearn import svm
+from sklearn.utils import shuffle
 
 from ..data.mfsc import result_handler
-from ..data.io import load_labels
+from ..data.io import load_labels_from_mat
 from ..generic import ProgressNotifier
 
 class Trainer():
@@ -38,9 +39,11 @@ class Trainer():
         from outside. """
 
         data = result_handler().load_file(self.datapath)
-        labels = load_labels(self.labelpath)
+        labels = load_labels_from_mat(self.labelpath)
+        data, labels = shuffle(data, labels, random_state=0)
 
-        assert data.shape[0] == labels.shape[0], "Non-matching amount of data and labels"
+        assert data.shape[0] == labels.shape[0], \
+            "Data and labels do not fit in shape"
 
         # TODO This is only a temporary hard coded fix, because the data are
         # currently provided in a transposed manner. Hence, we need to trans-
@@ -71,7 +74,7 @@ class Trainer():
         self.valdata = data[val_indices]
         self.traindata = data[train_indices]
         self.vallabels = labels[val_indices]
-        self.trainlabels = labels[val_indices]
+        self.trainlabels = labels[train_indices]
 
     def next(self):
         """ Get the datapoint for the training data at the current index and 
@@ -131,7 +134,8 @@ class Trainer():
         if not self.model:
             raise ValueError("Model is not set. Call `trainer.set_model()` with an appropriate model instance.")
         
-        print("Fitting model on {} images".format(self.trainsize))
+        print("Fitting model on {} images, validating on {} images"
+            .format(self.trainsize, self.valsize))
 
         # Check if weights are frozen
         if not self.model.conv_layer.is_training:
@@ -160,28 +164,48 @@ class Trainer():
             # Also resets progress notifiers
             self.reset()
 
+            test_freq = 100
+
             # TRAIN on the training data
             score = 'Nan'
+            train_scores = []
             for i in range(self.trainsize):
                 train_potentials[epoch,i] = self.model(self.next())
-                if (i+1) % 100 == 0:
+                if (i+1) % test_freq == 0:
                     clf = svm.SVC()
-                    clf = clf.fit(val_potentials[epoch, i-9:i+1].reshape(10,9*50), self.vallabels[i-9:i+1])
-                    score = clf.score(val_potentials[epoch, i-9:i+1].reshape(10,9*50), self.vallabels[i-9:i+1])
+                    clf = clf.fit(
+                        train_potentials[epoch, i-(test_freq-1):i+1]
+                            .reshape(test_freq,9*50), 
+                        self.trainlabels[i-(test_freq-1):i+1])
+                    score = clf.score(
+                        train_potentials[epoch, i-(test_freq-1):i+1]
+                            .reshape(test_freq,9*50), 
+                        self.trainlabels[i-(test_freq-1):i+1])
+                    train_scores.append(score)
                 self.train_prog.update({'Accuracy':score})
+            self.train_prog.update({'Mean Accuracy':np.mean(score)})
                 
             print()
 
             # VALIDATE on the validation data
             score = 'Nan'
+            val_scores = []
             self.model.freeze()
             for i in range(self.valsize):
                 val_potentials[epoch,i] = self.model(self.valnext())
-                if (i+1) % 100 == 0:
+                if (i+1) % test_freq == 0:
                     clf = svm.SVC()
-                    clf = clf.fit(val_potentials[epoch, i-9:i+1].reshape(10,9*50), self.vallabels[i-9:i+1])
-                    score = clf.score(val_potentials[epoch, i-9:i+1].reshape(10,9*50), self.vallabels[i-9:i+1])
+                    clf = clf.fit(
+                        val_potentials[epoch, i-(test_freq-1):i+1]
+                            .reshape(test_freq,9*50), 
+                        self.vallabels[i-(test_freq-1):i+1])
+                    score = clf.score(
+                        val_potentials[epoch, i-(test_freq-1):i+1]
+                            .reshape(test_freq,9*50), 
+                        self.vallabels[i-(test_freq-1):i+1])
+                    val_scores.append(score)
                 self.val_prog.update({'Accuracy':score})
+            self.val_prog.update({'Mean Accuracy':np.mean(val_scores)})
             self.model.unfreeze()
 
             # Print elapsed time
@@ -192,5 +216,5 @@ class Trainer():
                 int(elapsed_time%60), 
                 int(elapsed_time%60%1*100)))
 
-        print("\nDone.")
+        print("\nDone")
         return train_potentials, val_potentials
