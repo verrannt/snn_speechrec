@@ -35,10 +35,8 @@ class InputLayer():
                 for _ in range(n_timesteps)]
 
     def make_ranges(self, min, size, amount):
-        ranges = []
-        for range_min in np.arange(min,
-                         min + amount * size + 1, size):
-            ranges.append((range_min, range_min +size))
+        ranges = np.array([[x,x+size] for x in np.arange(min,
+                                                min+amount*size+1, size)])
         return ranges
 
     def find_range(self, value, ranges):
@@ -168,19 +166,20 @@ class ConvLayer():
 
                     # Update weights if stpd is allowed for this neuron
                     if self.is_training:
+                        #First, compute in advance to reduce number of computations
+                        part_used = np.multiply(self.weights[row // self.window_size, col, :, :],
+                                                                (1 - self.weights[row // self.window_size, col, :, :]))
                         # Update for input spike before output spike
                         delta_weights = self.allowed_to_learn[row, col] * self.A_plus * \
-                                        np.multiply(np.multiply(self.weights[row // self.window_size, col, :, :],
-                                                                (1 - self.weights[row // self.window_size, col, :, :])),
+                                        np.multiply(part_used,
                                                     self.input_spike_history[row:row + self.window_size, :])
-                        self.weights[row // self.window_size, col, :, :] += delta_weights
+                        #self.weights[row // self.window_size, col, :, :] += delta_weights
                         # Keep track of the total weight change
-                        self.delta_weight += np.sum(abs(delta_weights))
+                        #self.delta_weight += np.sum(abs(delta_weights))
 
                         # Update for elsewise
-                        delta_weights = self.allowed_to_learn[row, col] * -self.A_minus * \
-                                        np.multiply(np.multiply(self.weights[row // self.window_size, col, :, :],
-                                                                (1 - self.weights[row // self.window_size, col, :, :])),
+                        delta_weights += self.allowed_to_learn[row, col] * -self.A_minus * \
+                                        np.multiply(part_used,
                                                     abs(self.input_spike_history[row:row + self.window_size, :] - 1))
                         self.weights[row // self.window_size, col, :, :] += delta_weights
                         # Keep track of the total weight change
