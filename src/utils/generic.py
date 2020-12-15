@@ -20,10 +20,10 @@ class ProgressNotifier():
         self.title = title + ' '
         self.bar_len = bar_len
         self.show_bar = show_bar
-        self.current = 0
+        self.current = 1
 
     def reset(self):
-        self.current = 0
+        self.current = 1
 
     def update(self, metrics:dict={}):
 
@@ -60,3 +60,41 @@ class ProgressNotifier():
         sys.stdout.write('\r')
         sys.stdout.write(bar)
         sys.stdout.flush()
+
+class DataStream():
+    def __init__(self, data, labels, name='Unnamed DataStream'):
+
+        assert data.shape[0] == labels.shape[0], \
+            "Data and labels do not fit in shape. Got data with shape {} and"\
+            "labels with shape {}. The first dimension has to be the same"\
+            .format(data.shape, labels.shape)
+
+        self.data = data
+        self.labels = labels
+        self.name = name
+        
+        self.size = data.shape[0]
+        self.index = 0
+
+    def next(self):
+        """ Get the datapoint at the current index and increase the index. 
+        If the index has reached the end of the dataset, raise an IndexError 
+        and notify that index has to be reset. """
+
+        # Fail safe if index has reached end of dataset
+        try:
+            # Draw the current image
+            item = self.data[self.index]
+        except IndexError:
+            raise IndexError(
+                "{} reached the end of its data. To use further, "
+                "call `reset()` to reset the index to 0.".format(name))
+
+        # Increase the index
+        self.index += 1
+
+        return item
+
+    def reset(self):
+        self.index = 0
+
