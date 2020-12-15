@@ -70,7 +70,7 @@ class Trainer():
         val_indices = np.random.choice(
             data.shape[0], self.valsize, replace=False)
         train_indices = np.delete(np.arange(datasize), val_indices)
-        
+
         # Get the data and labels
         self.valdata = data[val_indices]
         self.traindata = data[train_indices]
@@ -91,7 +91,7 @@ class Trainer():
 
         # Increase the index
         self.trainindex += 1
-                
+
         return image
 
     def valnext(self):
@@ -115,7 +115,7 @@ class Trainer():
         """ Reset indexes to zero and reset the progress notifiers. """
         self.trainindex = 0
         self.valindex = 0
-        
+
         self.train_prog.reset()
         self.val_prog.reset()
 
@@ -134,7 +134,7 @@ class Trainer():
 
         if not self.model:
             raise ValueError("Model is not set. Call `trainer.set_model()` with an appropriate model instance.")
-        
+
         print("Fitting model on {} images, validating on {} images"
             .format(self.trainsize, self.valsize))
 
@@ -146,14 +146,14 @@ class Trainer():
         # Collect the membrane potentials of the pooling layer for all images
         # in all epochs
         train_potentials = np.empty((
-            epochs, 
-            self.trainsize, 
-            self.model.pooling_layer.output_shape[0], 
+            epochs,
+            self.trainsize,
+            self.model.pooling_layer.output_shape[0],
             self.model.pooling_layer.output_shape[1]))
         val_potentials = np.empty((
-            epochs, 
-            self.valsize, 
-            self.model.pooling_layer.output_shape[0], 
+            epochs,
+            self.valsize,
+            self.model.pooling_layer.output_shape[0],
             self.model.pooling_layer.output_shape[1]))
 
         # Keep track of feature map activations
@@ -183,11 +183,11 @@ class Trainer():
                     clf = svm.SVC()
                     clf = clf.fit(
                         train_potentials[epoch, i-(test_freq-1):i+1]
-                            .reshape(test_freq,9*50), 
+                            .reshape(test_freq,9*50),
                         self.trainlabels[i-(test_freq-1):i+1])
                     score = clf.score(
                         train_potentials[epoch, i-(test_freq-1):i+1]
-                            .reshape(test_freq,9*50), 
+                            .reshape(test_freq,9*50),
                         self.trainlabels[i-(test_freq-1):i+1])
                     train_scores.append(score)
                 self.train_prog.update({'Accuracy':score})
@@ -205,11 +205,11 @@ class Trainer():
                     clf = svm.SVC()
                     clf = clf.fit(
                         val_potentials[epoch, i-(test_freq-1):i+1]
-                            .reshape(test_freq,9*50), 
+                            .reshape(test_freq,9*50),
                         self.vallabels[i-(test_freq-1):i+1])
                     score = clf.score(
                         val_potentials[epoch, i-(test_freq-1):i+1]
-                            .reshape(test_freq,9*50), 
+                            .reshape(test_freq,9*50),
                         self.vallabels[i-(test_freq-1):i+1])
                     val_scores.append(score)
                 self.val_prog.update({'Accuracy':score})
@@ -220,33 +220,53 @@ class Trainer():
             end_time = time.time()
             elapsed_time = end_time-start_time
             print('\nElapsed time {:02}:{:02}:{:02}'.format(
-                int(elapsed_time/60), 
-                int(elapsed_time%60), 
+                int(elapsed_time/60),
+                int(elapsed_time%60),
                 int(elapsed_time%60%1*100)))
 
         print("\nDone")
+        # Plot output of SNN for a sample of each digit
+        self.visualize_snn()
+        # Plot some feature maps at different times in training
         self.visualize_featuremaps(feature_map_activations)
         return train_potentials, val_potentials
 
     def visualize_snn(self):
-        """
-        Plots the output of the SNN for a sample of each digit.
-        """
+        """ Plot the output of the SNN (pooling potentials) for a sample of each digit """
+        # Variables to keep track of plotted labels
+        labels_used = []
+        uniques = set(self.trainlabels)
+
+        # Create subplots with general information
+        fig, axs = plt.subplots(int(np.ceil(len(uniques)/2)), 2)
+        plt.setp(axs, xticks=[], yticks=[])
+        plt.subplots_adjust(hspace=0.5)
+        axs[int(np.ceil(len(uniques)/2)-1), 0].set_xlabel("Feature maps")
+        axs[int(np.ceil(len(uniques)/2)-1), 0].set_ylabel("Sections")
+
+        # Make sure that we are not training
+        self.model.freeze()
+
         done = False
         index = 0
-        labels_used = []
-        uniques = list(set(self.trainlabels))
-        fig, axs = plt.subplots(int(len(uniques)/2), 2)
-        self.model.freeze()
-        while not done:
+        while not done and index < len(self.trainlabels):
+            # Get label of current sample
             label = self.trainlabels[index]
-            if not label in labels_used:
+
+            # Check if label is already plotted
+            if label not in labels_used:
+                # Get SNN output of sample
                 image = self.traindata[index]
-                axs[label].plot(self.model(image))
+                # Plot SNN output
+                axs[int((label-1)/2), int((label-1) % 2)].imshow(self.model(image))
+                axs[int((label - 1) / 2), int((label - 1) % 2)].set_title("Digit " + str(int(label)), size=10)
+                # Keep track of plotted labels
                 labels_used.append(label)
             index += 1
-            if labels_used == uniques:
+            # Check if all labels are plotted
+            if set(labels_used) == uniques:
                 done = True
+        # Show final plot
         plt.show()
 
     def visualize_featuremaps(self, activations):
