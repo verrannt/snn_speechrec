@@ -164,49 +164,40 @@ class Trainer():
             # Also resets progress notifiers
             self.reset()
 
-            test_freq = 100
-
             # TRAIN on the training data
-            score = 'Nan'
-            train_scores = []
             for i in range(self.trainsize):
                 train_potentials[epoch,i] = self.model(self.next())
-                if (i+1) % test_freq == 0:
+                self.train_prog.update()
+            
                     clf = svm.SVC()
                     clf = clf.fit(
-                        train_potentials[epoch, i-(test_freq-1):i+1]
-                            .reshape(test_freq,9*50), 
-                        self.trainlabels[i-(test_freq-1):i+1])
-                    score = clf.score(
-                        train_potentials[epoch, i-(test_freq-1):i+1]
-                            .reshape(test_freq,9*50), 
-                        self.trainlabels[i-(test_freq-1):i+1])
-                    train_scores.append(score)
-                self.train_prog.update({'Accuracy':score})
-            self.train_prog.update({'Mean Accuracy':np.mean(score)})
+                train_potentials[epoch].reshape(self.trainsize,9*50), 
+                self.trainlabels)
+            train_score = clf.score(
+                train_potentials[epoch].reshape(self.trainsize,9*50), 
+                self.trainlabels)
                 
-            print()
+            print('\nTraining Classification Accuracy: {:.2f}'
+                .format(train_score))
 
             # VALIDATE on the validation data
-            score = 'Nan'
-            val_scores = []
             self.model.freeze()
             for i in range(self.valsize):
                 val_potentials[epoch,i] = self.model(self.valnext())
-                if (i+1) % test_freq == 0:
+                self.val_prog.update()
+            self.model.unfreeze()
+
                     clf = svm.SVC()
                     clf = clf.fit(
-                        val_potentials[epoch, i-(test_freq-1):i+1]
-                            .reshape(test_freq,9*50), 
-                        self.vallabels[i-(test_freq-1):i+1])
-                    score = clf.score(
-                        val_potentials[epoch, i-(test_freq-1):i+1]
-                            .reshape(test_freq,9*50), 
-                        self.vallabels[i-(test_freq-1):i+1])
-                    val_scores.append(score)
-                self.val_prog.update({'Accuracy':score})
-            self.val_prog.update({'Mean Accuracy':np.mean(val_scores)})
-            self.model.unfreeze()
+                val_potentials[epoch].reshape(self.valsize,9*50), 
+                self.vallabels)
+            val_score = clf.score(
+                val_potentials[epoch].reshape(self.valsize,9*50), 
+                self.vallabels)
+            
+            print('\nValidation Classification Accuracy: {:.2f}'
+                .format(val_score))
+
 
             # Print elapsed time
             end_time = time.time()
