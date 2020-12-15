@@ -15,7 +15,8 @@ def train_model(model, datapath, labelpath, epochs):
     # Set the model for the trainer
     trainer.set_model(model)
     # Fit the model
-    train_potentials, val_potentials = trainer.fit(epochs=epochs)
+    trainer.visualize_snn()
+    # train_potentials, val_potentials = trainer.fit(epochs=epochs)
     # Get fitted model from trainer and return with potentials
     return train_potentials, val_potentials, trainer.model
 
@@ -24,7 +25,7 @@ def test_model(model, data_path, label_path):
     pass
 
 def getArgs():
-    """ Parse command line arguemnts """
+    """ Parse command line arguments """
 
     parser = argparse.ArgumentParser(description="Interact with library.")
 

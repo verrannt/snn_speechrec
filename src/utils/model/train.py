@@ -4,6 +4,7 @@ import time
 import numpy as np
 from sklearn import svm
 from sklearn.utils import shuffle
+import matplotlib.pyplot as plt
 
 from ..data.mfsc import result_handler
 from ..data.io import load_labels_from_mat
@@ -155,6 +156,8 @@ class Trainer():
             self.model.pooling_layer.output_shape[0], 
             self.model.pooling_layer.output_shape[1]))
 
+        # Keep track of feature map activations
+        feature_map_activations = []
         # Iterate through all epochs
         for epoch in range(epochs):
             print("\nEpoch {}/{}".format(epoch+1, epochs))
@@ -167,10 +170,15 @@ class Trainer():
             test_freq = 100
 
             # TRAIN on the training data
+            self.model.unfreeze()
             score = 'Nan'
             train_scores = []
             for i in range(self.trainsize):
                 train_potentials[epoch,i] = self.model(self.next())
+                if (epoch * self.trainsize + i + 1) % 1 == 0:
+                    feature_map_activations.append(self.model.conv_layer.weights[0, 0:3, :, :])
+                if i == 10:
+                    break
                 if (i+1) % test_freq == 0:
                     clf = svm.SVC()
                     clf = clf.fit(
@@ -183,9 +191,9 @@ class Trainer():
                         self.trainlabels[i-(test_freq-1):i+1])
                     train_scores.append(score)
                 self.train_prog.update({'Accuracy':score})
-            self.train_prog.update({'Mean Accuracy':np.mean(score)})
-                
+            self.train_prog.update({'Mean Accuracy':np.mean(train_scores)})
             print()
+            break
 
             # VALIDATE on the validation data
             score = 'Nan'
@@ -217,4 +225,34 @@ class Trainer():
                 int(elapsed_time%60%1*100)))
 
         print("\nDone")
+        self.visualize_featuremaps(feature_map_activations)
         return train_potentials, val_potentials
+
+    def visualize_snn(self):
+        """
+        Plots the output of the SNN for a sample of each digit.
+        """
+        done = False
+        index = 0
+        labels_used = []
+        uniques = list(set(self.trainlabels))
+        fig, axs = plt.subplots(int(len(uniques)/2), 2)
+        self.model.freeze()
+        while not done:
+            label = self.trainlabels[index]
+            if not label in labels_used:
+                image = self.traindata[index]
+                axs[label].plot(self.model(image))
+                labels_used.append(label)
+            index += 1
+            if labels_used == uniques:
+                done = True
+        plt.show()
+
+    def visualize_featuremaps(self, activations):
+        fig, axs = plt.subplots(len(activations), 3)
+        for index, item in enumerate(activations):
+            axs[index, 0].plot(item[0,:,:])
+            axs[index, 1].plot(item[1,:,:])
+            axs[index, 2].plot(item[2,:,:])
+        plt.show()
