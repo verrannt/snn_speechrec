@@ -5,23 +5,7 @@ import timeit
 
 from models.speechmodel import SpeechModel
 from utils.model.train import Trainer
-
-def train_model(model, datapath, labelpath, epochs):
-    # Initialize the trainer with the path pointing to data on disk
-    trainer = Trainer(
-        datapath=datapath, 
-        labelpath=labelpath,
-        validation_split=0.2)
-    # Set the model for the trainer
-    trainer.set_model(model)
-    # Fit the model
-    train_potentials, val_potentials = trainer.fit(epochs=epochs)
-    # Get fitted model from trainer and return with potentials
-    return train_potentials, val_potentials, trainer.model
-
-def test_model(model, data_path, label_path):
-    model.freeze()
-    pass
+from utils.model.test import Tester
 
 def getArgs():
     """ Parse command line arguemnts """
@@ -56,13 +40,22 @@ def getArgs():
                         help="Save weights and potentials stored as numpy "
                         "array files. Only provide info about the run, e.g. "
                         "`run1_epoch1`, the rest is hardcoded.")
-    parser.add_argument("-d", "--datapath", 
+    parser.add_argument("-d", "--train_data", 
                         type=str,
                         help="Path to train set. If none is provided, will "
                         "default to path hardcoded in this script.")
-    parser.add_argument("-l", "--labelpath",
+    parser.add_argument("-l", "--train_labels",
                         type=str,
                         help="Path to labels matching train data. If none is "
+                        "provided, will default to path hardcoded in this "
+                        "script.")
+    parser.add_argument("--test_data", 
+                        type=str,
+                        help="Path to test set. If none is provided, will "
+                        "default to path hardcoded in this script.")
+    parser.add_argument("--test_labels",
+                        type=str,
+                        help="Path to labels matching test data. If none is "
                         "provided, will default to path hardcoded in this "
                         "script.")
     parser.add_argument("-v", "--verbose", 
@@ -81,24 +74,35 @@ if __name__=='__main__':
     weights_path = 'models/weights/'
 
     if CONFIGS.load:
+
         model.load_weights(path='{}weights_{}.npy'.format(
             weights_path, CONFIGS.load))
         print('Loaded model weights')
     
     if CONFIGS.train:
+
         # Check if specific path to data is provided
-        if CONFIGS.datapath and CONFIGS.labelpath:
-            datapath = CONFIGS.datapath
-            labelpath = CONFIGS.labelpath
+        if CONFIGS.train_data and CONFIGS.train_labels:
+            datapath = CONFIGS.train_data
+            labelpath = CONFIGS.train_labels
+
         # Else use hardcoded default
         else:
             datapath = "src/utils/data/own_tidigit_train_results.npy"
             labelpath = "data/Spike TIDIGITS/TIDIGIT_train.mat"
+            print('No train data was provided, defaulting to the following:\n'
+                  ' datapath:  {}\n'
+                  ' labelpath: {}'.format(datapath, labelpath))
 
-        train_potentials, val_potentials, model = train_model(
-            model, datapath, labelpath, epochs=CONFIGS.train)
+        # Create trainer for this data
+        trainer = Trainer(datapath, labelpath, validation_split=0.2)
+        
+        # Fit the model on the data
+        model, train_potentials, val_potentials = \
+            trainer.fit(model, epochs=CONFIGS.train)
 
     if CONFIGS.save:
+
         model.save_weights(path='{}weights_{}.npy'.format(
             weights_path, CONFIGS.save))
         print('Saved model weights')
@@ -112,6 +116,8 @@ if __name__=='__main__':
             np.save(f, train_potentials)
         print('Saved potentials')
 
+        print()
+
     if CONFIGS.freeze:
         # Freeze model
         model.freeze()
@@ -121,7 +127,16 @@ if __name__=='__main__':
         model.time_test(n_trials=1, n_timesteps=20)
 
     if CONFIGS.test:
-        # Check whether both paths provided
-        if not (CONFIGS.datapath and CONFIGS.labelpath):
-            raise ValueError("Both `--datapath` and `--labelpath` need to be provided and correspond to the same data.")
-        test_model(model, CONFIGS.datapath, CONFIGS.labelpath)
+        # Check whether both paths are provided
+        if CONFIGS.test_data and CONFIGS.test_labels:
+            test_datapath = CONFIGS.test_data
+            test_labelpath = CONFIGS.test_labels
+        else:
+            test_datapath = "src/utils/data/own_tidigit_test_results.npy"
+            test_labelpath = "data/Spike TIDIGITS/TIDIGIT_test.mat"
+            print('No test data was provided, defaulting to the following:\n'
+                  ' datapath:  {}\n'
+                  ' labelpath: {}'.format(test_datapath, test_labelpath))
+
+        tester = Tester(test_datapath, test_labelpath)
+        tester.evaluate(model)

@@ -1,6 +1,61 @@
 import numpy as np
 import pandas as pd
 from scipy.io import loadmat
+from sklearn.utils import shuffle as sklearn_shuffle
+
+from ..data.mfsc import result_handler
+
+def load_data_from_path(datapath:str, 
+                        labelpath:str,
+                        validation_split:float=0.0,
+                        shuffle:bool=True):
+        
+        data = result_handler().load_file(datapath)
+        labels = load_labels_from_mat(labelpath)
+        
+        if shuffle:
+            data, labels = sklearn_shuffle(data, labels, random_state=0)
+
+        assert data.shape[0] == labels.shape[0], \
+            "Data and labels do not fit in shape"
+
+        # TODO This is only a temporary hard coded fix, because the data are
+        # currently provided in a transposed manner. Hence, we need to trans-
+        # pose them back
+        new_data = np.empty((data.shape[0], data.shape[2], data.shape[1]))
+        for i in range(data.shape[0]):
+            new_data[i] = data[i].T
+        data = new_data
+
+        # Get data shape
+        datashape = (data.shape[1], data.shape[2])
+        print("Read {} datapoints from storage with shape {}x{}"
+            .format(data.shape[0], data.shape[1], data.shape[2]))
+
+        # Get size of data and compute size of validation and training set 
+        # from provided validation split
+        datasize = data.shape[0]
+
+        if validation_split > 0.0:
+            valsize = int(datasize * validation_split)
+            trainsize = datasize - valsize
+
+            # Randomly choose indices for validation and training set 
+            # corresponding to previously defined sizes
+            val_indices = np.random.choice(
+                data.shape[0], valsize, replace=False)
+            train_indices = np.delete(np.arange(datasize), val_indices)
+        
+            # Get the data and labels
+            valdata = data[val_indices]
+            traindata = data[train_indices]
+            vallabels = labels[val_indices]
+            trainlabels = labels[train_indices]
+
+            return traindata, trainlabels, valdata, vallabels
+        
+        else:
+            return data, labels, None, None
 
 def load_labels_from_mat(path, typ:str='train'):
     """ Load class labels from a matlab file provided under `path` and return

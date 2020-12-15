@@ -20,10 +20,10 @@ class ProgressNotifier():
         self.title = title + ' '
         self.bar_len = bar_len
         self.show_bar = show_bar
-        self.current = 0
+        self.current = 1
 
     def reset(self):
-        self.current = 0
+        self.current = 1
 
     def update(self, metrics:dict={}):
 
