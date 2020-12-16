@@ -5,6 +5,7 @@ import numpy as np
 from sklearn import svm
 from sklearn.utils import shuffle
 import matplotlib.pyplot as plt
+import copy
 
 from ..data.mfsc import result_handler
 from ..data.io import load_labels_from_mat
@@ -156,8 +157,10 @@ class Trainer():
             self.model.pooling_layer.output_shape[0],
             self.model.pooling_layer.output_shape[1]))
 
-        # Keep track of feature map activations
+        # Keep track of feature map activations to visualize it
         feature_map_activations = []
+        visualize_freq = 2000
+
         # Iterate through all epochs
         for epoch in range(epochs):
             print("\nEpoch {}/{}".format(epoch+1, epochs))
@@ -175,10 +178,13 @@ class Trainer():
             train_scores = []
             for i in range(self.trainsize):
                 train_potentials[epoch,i] = self.model(self.next())
-                if (epoch * self.trainsize + i + 1) % 1 == 0:
-                    feature_map_activations.append(self.model.conv_layer.weights[0, 0:3, :, :])
-                if i == 10:
-                    break
+
+                if (epoch * self.trainsize + i + 1) % visualize_freq == 0:
+                    # Save weights for feature map visualisation
+                    feature_map_activations.append([copy.copy(self.model.conv_layer.weights[0, 0, :, :]),
+                                                    copy.copy(self.model.conv_layer.weights[4, 14, :, :]),
+                                                    copy.copy(self.model.conv_layer.weights[8, 49, :, :])])
+
                 if (i+1) % test_freq == 0:
                     clf = svm.SVC()
                     clf = clf.fit(
@@ -193,7 +199,6 @@ class Trainer():
                 self.train_prog.update({'Accuracy':score})
             self.train_prog.update({'Mean Accuracy':np.mean(train_scores)})
             print()
-            break
 
             # VALIDATE on the validation data
             score = 'Nan'
@@ -225,10 +230,10 @@ class Trainer():
                 int(elapsed_time%60%1*100)))
 
         print("\nDone")
+        # Plot some feature maps at different times in training
+        self.visualize_featuremaps(feature_map_activations, visualize_freq)
         # Plot output of SNN for a sample of each digit
         self.visualize_snn()
-        # Plot some feature maps at different times in training
-        self.visualize_featuremaps(feature_map_activations)
         return train_potentials, val_potentials
 
     def visualize_snn(self):
@@ -269,10 +274,24 @@ class Trainer():
         # Show final plot
         plt.show()
 
-    def visualize_featuremaps(self, activations):
+    def visualize_featuremaps(self, activations, steps):
+        """ Plot the feature maps of the SNN (weight of CNN) for three feature maps """
+        # Create subplots with general information
         fig, axs = plt.subplots(len(activations), 3)
+        plt.setp(axs, xticks=[], yticks=[])
+        axs[len(activations)-1, 0].set_xlabel("Feature map #1")
+        axs[len(activations)-1, 1].set_xlabel("Feature map #2")
+        axs[len(activations)-1, 2].set_xlabel("Feature map #3")
+        fig.text(0.05, 0.5, 'Number of training samples', ha='center', va='center', rotation='vertical')
+
+        min_weight = 0
+        max_weight = max(1, np.max(np.array(activations)))
         for index, item in enumerate(activations):
-            axs[index, 0].plot(item[0,:,:])
-            axs[index, 1].plot(item[1,:,:])
-            axs[index, 2].plot(item[2,:,:])
+            # Set label
+            axs[index, 0].set_ylabel(steps*index*1000, rotation='horizontal', labelpad=17)
+            # Plot the three feature maps
+            axs[index, 0].imshow(item[0], vmin=min_weight, vmax=max_weight)
+            axs[index, 1].imshow(item[1], vmin=min_weight, vmax=max_weight)
+            axs[index, 2].imshow(item[2], vmin=min_weight, vmax=max_weight)
+        # Show final plot
         plt.show()
