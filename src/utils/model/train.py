@@ -94,7 +94,7 @@ class Trainer():
                 train_potentials[epoch,i] = model(self.trainstream.next())
                 self.train_prog.update()
 
-                if (epoch * self.trainstream.size + i + 1) % visualize_freq == 0:
+                if (epoch * self.trainstream.size + i) % visualize_freq == 0:
                     # Save weights for feature map visualisation
                     feature_map_activations.append([copy.copy(model.conv_layer.weights[0, 0, :, :]),
                                                     copy.copy(model.conv_layer.weights[4, 14, :, :]),
