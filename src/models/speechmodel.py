@@ -284,7 +284,7 @@ class SpeechModel():
         """ Load weights for the model from a numpy array stored on disk.
         Array must be of same shape as weights in convolutional layer. """
         with open(path, 'rb') as f:
-            self.conv_layer.weights == np.load(f)
+            self.conv_layer.weights = np.load(f)
 
     def save_weights(self, path):
         """ Save weights of the model as numpy array on disk. """
