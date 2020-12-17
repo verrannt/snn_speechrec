@@ -125,10 +125,6 @@ class Trainer():
                 model.unfreeze()
                 print()
 
-                clf = svm.LinearSVC(max_iter=5000)
-                clf = clf.fit(
-                    val_potentials[epoch].reshape(self.valstream.size,9*50), 
-                    self.valstream.labels)
                 val_score = clf.score(
                     val_potentials[epoch].reshape(self.valstream.size,9*50), 
                     self.valstream.labels)
