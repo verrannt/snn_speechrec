@@ -200,7 +200,7 @@ class Trainer():
         max_weight = max(1, np.max(np.array(activations)))
         for index, item in enumerate(activations):
             # Set label
-            axs[index, 0].set_ylabel(steps * index * 1000, rotation='horizontal', labelpad=17)
+            axs[index, 0].set_ylabel(steps * index, rotation='horizontal', labelpad=17)
             # Plot the three feature maps
             axs[index, 0].imshow(item[0], vmin=min_weight, vmax=max_weight)
             axs[index, 1].imshow(item[1], vmin=min_weight, vmax=max_weight)
