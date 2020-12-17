@@ -8,13 +8,15 @@ from ..data.mfsc import result_handler
 def load_data_from_path(datapath:str, 
                         labelpath:str,
                         validation_split:float=0.0,
-                        shuffle:bool=True):
+                        shuffle:bool=True,
+                        random_seed=123):
         
         data = result_handler().load_file(datapath)
         labels = load_labels_from_mat(labelpath)
         
         if shuffle:
-            data, labels = sklearn_shuffle(data, labels, random_state=0)
+            data, labels = sklearn_shuffle(data, labels, 
+                random_state=random_seed)
 
         assert data.shape[0] == labels.shape[0], \
             "Data and labels do not fit in shape"
@@ -42,6 +44,7 @@ def load_data_from_path(datapath:str,
 
             # Randomly choose indices for validation and training set 
             # corresponding to previously defined sizes
+            np.random.seed(random_seed)
             val_indices = np.random.choice(
                 data.shape[0], valsize, replace=False)
             train_indices = np.delete(np.arange(datasize), val_indices)
