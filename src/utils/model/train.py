@@ -4,6 +4,8 @@ import time
 import numpy as np
 from sklearn import svm
 from sklearn.utils import shuffle
+import matplotlib.pyplot as plt
+import copy
 
 from ..data.io import load_labels_from_mat, load_data_from_path
 from ..generic import ProgressNotifier, DataStream
@@ -73,6 +75,10 @@ class Trainer():
         else:
             val_potentials = None
 
+        # Keep track of feature map activations to visualize it
+        feature_map_activations = []
+        visualize_freq = 2000
+
         # Iterate through all epochs
         for epoch in range(epochs):
             print("\nEpoch {}/{}".format(epoch+1, epochs))
@@ -85,10 +91,16 @@ class Trainer():
 
             # TRAIN on the training data
             for i in range(self.trainstream.size):
-                train_potentials[epoch,i] = model(self.trainstream.next())                    
+                train_potentials[epoch,i] = model(self.trainstream.next())
                 self.train_prog.update()
+
+                if (epoch * self.trainstream.size + i + 1) % visualize_freq == 0:
+                    # Save weights for feature map visualisation
+                    feature_map_activations.append([copy.copy(model.conv_layer.weights[0, 0, :, :]),
+                                                    copy.copy(model.conv_layer.weights[4, 14, :, :]),
+                                                    copy.copy(model.conv_layer.weights[8, 49, :, :])])
             print()
-            
+
             clf = svm.LinearSVC(max_iter=5000)
             clf = clf.fit(
                 train_potentials[epoch].reshape(self.trainstream.size,9*50), 
@@ -134,5 +146,68 @@ class Trainer():
 
         print('\nFinished training\n')
 
+        # Plot some feature maps at different times in training
+        self.visualize_featuremaps(feature_map_activations, visualize_freq)
+        # Plot output of SNN for a sample of each digit
+        self.visualize_snn(model)
         return model, train_potentials, val_potentials
 
+    def visualize_snn(self, model):
+        """ Plot the output of the SNN (pooling potentials) for a sample of each digit """
+        # Variables to keep track of plotted labels
+        labels_used = []
+        uniques = set(self.trainstream.labels)
+
+        # Create subplots with general information
+        fig, axs = plt.subplots(int(np.ceil(len(uniques) / 2)), 2)
+        plt.setp(axs, xticks=[], yticks=[])
+        plt.subplots_adjust(hspace=0.5)
+        axs[int(np.ceil(len(uniques) / 2) - 1), 0].set_xlabel("Feature maps")
+        axs[int(np.ceil(len(uniques) / 2) - 1), 0].set_ylabel("Sections")
+
+        # Make sure that we are not training
+        model.freeze()
+
+        done = False
+        index = 0
+        while not done and index < len(self.trainstream.labels):
+            # Get label of current sample
+            label = self.trainstream.labels[index]
+
+            # Check if label is already plotted
+            if label not in labels_used:
+                # Get SNN output of sample
+                image = self.trainstream.data[index]
+                # Plot SNN output
+                axs[int((label - 1) / 2), int((label - 1) % 2)].imshow(model(image))
+                axs[int((label - 1) / 2), int((label - 1) % 2)].set_title("Digit " + str(int(label)), size=10)
+                # Keep track of plotted labels
+                labels_used.append(label)
+            index += 1
+            # Check if all labels are plotted
+            if set(labels_used) == uniques:
+                done = True
+        # Show final plot
+        plt.show()
+
+    def visualize_featuremaps(self, activations, steps):
+        """ Plot the feature maps of the SNN (weight of CNN) for three feature maps """
+        # Create subplots with general information
+        fig, axs = plt.subplots(len(activations), 3)
+        plt.setp(axs, xticks=[], yticks=[])
+        axs[len(activations) - 1, 0].set_xlabel("Feature map #1")
+        axs[len(activations) - 1, 1].set_xlabel("Feature map #2")
+        axs[len(activations) - 1, 2].set_xlabel("Feature map #3")
+        fig.text(0.05, 0.5, 'Number of training samples', ha='center', va='center', rotation='vertical')
+
+        min_weight = 0
+        max_weight = max(1, np.max(np.array(activations)))
+        for index, item in enumerate(activations):
+            # Set label
+            axs[index, 0].set_ylabel(steps * index * 1000, rotation='horizontal', labelpad=17)
+            # Plot the three feature maps
+            axs[index, 0].imshow(item[0], vmin=min_weight, vmax=max_weight)
+            axs[index, 1].imshow(item[1], vmin=min_weight, vmax=max_weight)
+            axs[index, 2].imshow(item[2], vmin=min_weight, vmax=max_weight)
+        # Show final plot
+        plt.show()

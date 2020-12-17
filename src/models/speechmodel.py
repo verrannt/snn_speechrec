@@ -110,7 +110,7 @@ class ConvLayer():
         self.allowed_to_learn = np.ones(self.output_shape)
 
         # Parameters for Integrate-and-Fire neurons
-        self.v_thresh = 28.0
+        self.v_thresh = 23.0
         self.v_reset = 0.0
 
         # Parameters for STDP (NOTE: not necessarily all are needed)
