@@ -24,10 +24,11 @@ def load_data_from_path(datapath:str,
         # TODO This is only a temporary hard coded fix, because the data are
         # currently provided in a transposed manner. Hence, we need to trans-
         # pose them back
-        new_data = np.empty((data.shape[0], data.shape[2], data.shape[1]))
-        for i in range(data.shape[0]):
-            new_data[i] = data[i].T
-        data = new_data
+        if 'own' in datapath:
+            new_data = np.empty((data.shape[0], data.shape[2], data.shape[1]))
+            for i in range(data.shape[0]):
+                new_data[i] = data[i].T
+            data = new_data
 
         # Get data shape
         datashape = (data.shape[1], data.shape[2])
