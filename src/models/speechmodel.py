@@ -279,6 +279,7 @@ class SpeechModel():
         self.pooling_layer = PoolingLayer(self.conv_layer.output_shape)
         # Set the amount of timesteps to unfold the input to
         self.n_time_options = n_time_options
+        self.training_stopped = False
         
     def load_weights(self, path):
         """ Load weights for the model from a numpy array stored on disk.
@@ -301,6 +302,11 @@ class SpeechModel():
         fed to the model. """
         self.conv_layer.is_training = True
 
+    def check_stopping_criterion(self):
+        if self.conv_layer.is_training and self.conv_layer.delta_weight < 0.01:
+            print('Training will be stopped because weight changes became insufficient')
+            self.training_stopped = True
+
     def __call__(self, input_mfsc):
         """ Run the SpeechModel on a single MFSC spectrogram frame. Returns a 
         list of membrane potentials of all neurons in the last layer 
@@ -322,6 +328,9 @@ class SpeechModel():
             conv_spikes.append(self.conv_layer(spikes))
 
         pooling_potentials = self.pooling_layer(conv_spikes)
+
+        self.check_stopping_criterion()
+
         return pooling_potentials
 
     def time_test(self, n_trials, n_timesteps):

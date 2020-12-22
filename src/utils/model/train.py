@@ -98,6 +98,7 @@ class Trainer():
             # TRAIN on the training data
             for i in range(self.trainstream.size):
                 train_potentials[epoch,i] = model(self.trainstream.next())
+
                 self.train_prog.update()
 
                 if (epoch * self.trainstream.size + i) % visualize_freq == 0:
@@ -145,6 +146,9 @@ class Trainer():
                 int(elapsed_time/60), 
                 int(elapsed_time%60), 
                 int(elapsed_time%60%1*100)))
+
+            if model.training_stopped:
+                break
 
         print('\nFinished training\n')
 
