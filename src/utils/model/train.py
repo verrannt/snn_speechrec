@@ -66,13 +66,16 @@ class Trainer():
             self.trainstream.size, 
             model.pooling_layer.output_shape[0], 
             model.pooling_layer.output_shape[1]))
+        train_scores = []
         if self.uses_validation:
             val_potentials = np.empty((
                 epochs, 
                 self.valstream.size, 
                 model.pooling_layer.output_shape[0], 
                 model.pooling_layer.output_shape[1]))
+            val_scores = []
         else:
+            val_scores = None
             val_potentials = None
 
         # Keep track of feature map activations to visualize it
@@ -111,7 +114,7 @@ class Trainer():
             train_score = clf.score(
                 train_potentials[epoch].reshape(self.trainstream.size,9*50), 
                 self.trainstream.labels)
-                
+            train_scores.append(train_score)
             print('Training Accuracy: {:.2f}'
                 .format(train_score))
 
@@ -131,7 +134,7 @@ class Trainer():
                 val_score = clf.score(
                     val_potentials[epoch].reshape(self.valstream.size,9*50), 
                     self.valstream.labels)
-                
+                val_scores.append(val_score)
                 print('Validation Accuracy: {:.2f}'
                     .format(val_score))
 
@@ -145,12 +148,29 @@ class Trainer():
 
         print('\nFinished training\n')
 
+        self.plot_history(train_scores, val_scores, epochs)
         # Plot some feature maps at different times in training
         if feature_map_activations: # check if not empty
             self.visualize_featuremaps(feature_map_activations, visualize_freq)
         # Plot output of SNN for a sample of each digit
         self.visualize_snn(model)
-        return model, train_potentials, val_potentials
+        
+        return model, train_potentials, val_potentials, train_scores, val_scores
+
+    def plot_history(self, train_scores, val_scores, n_epochs):
+        fontsize=15
+        
+        plt.figure(figsize=(20,10))
+        plt.plot(range(1, n_epochs+1), train_scores)
+        if val_scores:
+            plt.plot(range(1, n_epochs+1), val_scores)
+        plt.grid(True)
+        plt.xlabel('Epoch', fontsize=fontsize)
+        plt.ylabel('Accuracy', fontsize=fontsize)
+        plt.xticks(range(1, n_epochs+1), fontsize=fontsize*0.9)
+        plt.yticks(fontsize=fontsize*0.9)
+        plt.title('Training History', fontsize=fontsize*1.2)
+        plt.show()        
 
     def visualize_snn(self, model):
         """ Plot the output of the SNN (pooling potentials) for a sample of each digit """
