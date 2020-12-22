@@ -21,9 +21,9 @@ class Tester():
 
         self.stream = DataStream(data, labels)
         self.prog = ProgressNotifier(
-            title='Testing', total=self.stream.size)
+            title='Collecting Test Potentials', total=self.stream.size)
 
-    def evaluate(self, model):
+    def evaluate(self, model, train_potentials, train_labels):
 
         if self.datashape != model.input_layer.input_shape:
             raise ValueError(
@@ -56,15 +56,19 @@ class Tester():
         
         # Fit classifier on the potentials
         clf = svm.LinearSVC(max_iter=5000)
+        print('Fitting LinearSVC on training potentials')
         clf = clf.fit(
-            potentials.reshape(self.stream.size,9*50), 
-            self.stream.labels)
-        score = clf.score(
+            train_potentials.reshape(train_potentials.shape[0],9*50), 
+            train_labels)
+        train_score = clf.score(
+            train_potentials.reshape(train_potentials.shape[0],9*50),
+            train_labels)
+        test_score = clf.score(
             potentials.reshape(self.stream.size,9*50), 
             self.stream.labels)
             
-        print('Testing Accuracy: {:.2f}'
-            .format(score))
+        print('Training Accuracy: {:.2f}'.format(train_score))
+        print('Testing Accuracy: {:.2f}'.format(test_score))
 
         return potentials
 
