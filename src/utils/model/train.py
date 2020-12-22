@@ -40,6 +40,10 @@ class Trainer():
         else:
             self.uses_validation = False
 
+        # Determines whether training will be stopped at the end of an episode
+        # due to criterion communicated from the model
+        self.stop_training = False
+
     def fit(self, model, epochs):
         """ Fit a model on the internal data """
         
@@ -57,7 +61,10 @@ class Trainer():
         # Check if weights are frozen
         if not model.conv_layer.is_training:
             model.unfreeze()
-            print("WARNING: model weights were automatically unfrozen")
+            print("[!] Warning: model weights were automatically unfrozen")
+
+        # Reset in case it has been set before
+        self.stop_training = False
 
         # Collect the membrane potentials of the pooling layer for all images
         # in all epochs
@@ -98,8 +105,11 @@ class Trainer():
             # TRAIN on the training data
             for i in range(self.trainstream.size):
                 train_potentials[epoch,i] = model(self.trainstream.next())
-
                 self.train_prog.update()
+
+                # Stop training with criterion from model
+                if model.check_stopping_criterion():
+                    self.stop_training = True
 
                 if (epoch * self.trainstream.size + i) % visualize_freq == 0:
                     # Save weights for feature map visualisation
@@ -147,12 +157,15 @@ class Trainer():
                 int(elapsed_time%60), 
                 int(elapsed_time%60%1*100)))
 
-            if model.training_stopped:
+            # Stop training
+            if self.stop_training:
+                print('[!] Stopping criterion was met and training will be '
+                'terminated.')
                 break
 
         print('\nFinished training\n')
 
-        self.plot_history(train_scores, val_scores, epochs)
+        self.plot_history(train_scores, val_scores, len(train_scores))
         # Plot some feature maps at different times in training
         if feature_map_activations: # check if not empty
             self.visualize_featuremaps(feature_map_activations, visualize_freq)
