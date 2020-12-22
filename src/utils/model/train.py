@@ -77,7 +77,10 @@ class Trainer():
 
         # Keep track of feature map activations to visualize it
         feature_map_activations = []
-        visualize_freq = 2000
+        if epochs <= 1:
+            visualize_freq = 150
+        else:
+            visualize_freq = 2000
 
         # Iterate through all epochs
         for epoch in range(epochs):
@@ -175,7 +178,7 @@ class Trainer():
                 # Get SNN output of sample
                 image = self.trainstream.data[index]
                 # Plot SNN output
-                axs[int((label - 1) / 2), int((label - 1) % 2)].imshow(model(image))
+                axs[int((label - 1) / 2), int((label - 1) % 2)].imshow(model(image), vmin=0, vmax=4)
                 axs[int((label - 1) / 2), int((label - 1) % 2)].set_title("Digit " + str(int(label)), size=10)
                 # Keep track of plotted labels
                 labels_used.append(label)
