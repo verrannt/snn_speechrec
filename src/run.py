@@ -70,7 +70,7 @@ if __name__=='__main__':
 
     CONFIGS = getArgs()
 
-    model = SpeechModel(input_shape = (41,40), n_time_options=30)
+    model = SpeechModel(input_shape = (41,40), n_time_options=2)
 
     weights_path = 'models/weights/'
 
@@ -145,6 +145,14 @@ if __name__=='__main__':
         # solutions, but this works for now.
 
         # Load training potentials
+        if CONFIGS.load:
+            run_name = CONFIGS.load
+        elif CONFIGS.save:
+            run_name = CONFIGS.save
+        else:
+            raise ValueError(
+                'Script was called with the --test flag, yet no save nor load '
+                'name was provided.')
         run_name = CONFIGS.load if CONFIGS.load else CONFIGS.save
         run_name = 'models/logs/train_potentials_{}.npy'.format(run_name)
         with open(run_name, 'rb') as f:
