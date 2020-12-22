@@ -77,7 +77,10 @@ class Trainer():
 
         # Keep track of feature map activations to visualize it
         feature_map_activations = []
-        visualize_freq = 2000
+        if epochs <= 1:
+            visualize_freq = 150
+        else:
+            visualize_freq = 2000
 
         # Iterate through all epochs
         for epoch in range(epochs):
@@ -94,7 +97,7 @@ class Trainer():
                 train_potentials[epoch,i] = model(self.trainstream.next())
                 self.train_prog.update()
 
-                if (epoch * self.trainstream.size + i + 1) % visualize_freq == 0:
+                if (epoch * self.trainstream.size + i) % visualize_freq == 0:
                     # Save weights for feature map visualisation
                     feature_map_activations.append([copy.copy(model.conv_layer.weights[0, 0, :, :]),
                                                     copy.copy(model.conv_layer.weights[4, 14, :, :]),
@@ -175,7 +178,7 @@ class Trainer():
                 # Get SNN output of sample
                 image = self.trainstream.data[index]
                 # Plot SNN output
-                axs[int((label - 1) / 2), int((label - 1) % 2)].imshow(model(image))
+                axs[int((label - 1) / 2), int((label - 1) % 2)].imshow(model(image), vmin=0, vmax=4)
                 axs[int((label - 1) / 2), int((label - 1) % 2)].set_title("Digit " + str(int(label)), size=10)
                 # Keep track of plotted labels
                 labels_used.append(label)
@@ -200,7 +203,7 @@ class Trainer():
         max_weight = max(1, np.max(np.array(activations)))
         for index, item in enumerate(activations):
             # Set label
-            axs[index, 0].set_ylabel(steps * index * 1000, rotation='horizontal', labelpad=17)
+            axs[index, 0].set_ylabel(steps * index, rotation='horizontal', labelpad=17)
             # Plot the three feature maps
             axs[index, 0].imshow(item[0], vmin=min_weight, vmax=max_weight)
             axs[index, 1].imshow(item[1], vmin=min_weight, vmax=max_weight)
