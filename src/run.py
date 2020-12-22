@@ -6,6 +6,7 @@ import timeit
 from models.speechmodel import SpeechModel
 from utils.model.train import Trainer
 from utils.model.test import Tester
+from utils.data.io import load_data_from_path
 
 def getArgs():
     """ Parse command line arguemnts """
@@ -127,6 +128,7 @@ if __name__=='__main__':
         model.time_test(n_trials=1, n_timesteps=20)
 
     if CONFIGS.test:
+
         # Check whether both paths are provided
         if CONFIGS.test_data and CONFIGS.test_labels:
             test_datapath = CONFIGS.test_data
@@ -138,5 +140,21 @@ if __name__=='__main__':
                   ' datapath:  {}\n'
                   ' labelpath: {}'.format(test_datapath, test_labelpath))
 
+        # NOTE The below is quite a hacky and ugly solution to get the training
+        # labels and potentials into the `Tester`. There are likely nicer 
+        # solutions, but this works for now.
+
+        # Load training potentials
+        run_name = CONFIGS.load if CONFIGS.load else CONFIGS.save
+        run_name = 'models/logs/train_potentials_{}.npy'.format(run_name)
+        with open(run_name, 'rb') as f:
+            train_potentials = np.load(f)[-1]
+        # Load training labels
+        train_path = test_datapath.replace('test','train')
+        train_labelpath = test_labelpath.replace('test','train')
+        _,train_labels,_,_ = load_data_from_path(train_path, train_labelpath, 0.2)
+
+        # Run testing
         tester = Tester(test_datapath, test_labelpath)
-        tester.evaluate(model)
+        tester.evaluate(model, train_potentials, train_labels)
+

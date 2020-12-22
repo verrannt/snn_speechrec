@@ -146,7 +146,8 @@ class Trainer():
         print('\nFinished training\n')
 
         # Plot some feature maps at different times in training
-        self.visualize_featuremaps(feature_map_activations, visualize_freq)
+        if feature_map_activations: # check if not empty
+            self.visualize_featuremaps(feature_map_activations, visualize_freq)
         # Plot output of SNN for a sample of each digit
         self.visualize_snn(model)
         return model, train_potentials, val_potentials
