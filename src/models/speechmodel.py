@@ -301,6 +301,9 @@ class SpeechModel():
         fed to the model. """
         self.conv_layer.is_training = True
 
+    def check_stopping_criterion(self):
+        return self.conv_layer.delta_weight < 0.01
+        
     def __call__(self, input_mfsc):
         """ Run the SpeechModel on a single MFSC spectrogram frame. Returns a 
         list of membrane potentials of all neurons in the last layer 
@@ -322,6 +325,7 @@ class SpeechModel():
             conv_spikes.append(self.conv_layer(spikes))
 
         pooling_potentials = self.pooling_layer(conv_spikes)
+
         return pooling_potentials
 
     def time_test(self, n_trials, n_timesteps):
