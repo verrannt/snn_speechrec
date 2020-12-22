@@ -1,6 +1,7 @@
 import argparse
 
 import numpy as np
+import pickle
 import timeit
 
 from models.speechmodel import SpeechModel
@@ -59,6 +60,10 @@ def getArgs():
                         help="Path to labels matching test data. If none is "
                         "provided, will default to path hardcoded in this "
                         "script.")
+    parser.add_argument("--plot_history",
+                        type=str,
+                        help="Plot training history from disk by providing "
+                        "name of run, similar to --load and --save.")
     parser.add_argument("-v", "--verbose", 
                         dest='verbose', 
                         action='store_true', 
@@ -70,7 +75,7 @@ if __name__=='__main__':
 
     CONFIGS = getArgs()
 
-    model = SpeechModel(input_shape = (41,40), n_time_options=2)
+    model = SpeechModel(input_shape = (41,40), n_time_options=30)
 
     weights_path = 'models/weights/'
 
@@ -99,7 +104,7 @@ if __name__=='__main__':
         trainer = Trainer(datapath, labelpath, validation_split=0.2)
         
         # Fit the model on the data
-        model, train_potentials, val_potentials = \
+        model, train_potentials, val_potentials, train_scores, val_scores = \
             trainer.fit(model, epochs=CONFIGS.train)
 
     if CONFIGS.save:
@@ -117,8 +122,30 @@ if __name__=='__main__':
             np.save(f, train_potentials)
         print('Saved potentials')
 
+        # Save training scores as a dictionary
+        history = dict()
+        history['train_acc'] = train_scores
+        if val_scores:
+            history['val_acc'] = val_scores
+        history_filename = 'models/logs/train_history_{}.npy'.format(CONFIGS.save)
+        with open(history_filename, 'wb') as f:
+            pickle.dump(history, f)
+        print('Saved history')
+
         print()
 
+    if CONFIGS.plot_history:
+        history_filename = 'models/logs/train_history_{}.npy'\
+            .format(CONFIGS.plot_history)
+        with open(history_filename, 'rb') as f:
+            history = pickle.load(f)
+        train_scores = history['train_acc']
+        try:
+            val_scores = history['val_acc']
+        except KeyError:
+            val_scores = None
+        Trainer.plot_history(None, train_scores, val_scores, len(train_scores))
+        
     if CONFIGS.freeze:
         # Freeze model
         model.freeze()
