@@ -4,6 +4,8 @@ import time
 import numpy as np
 from sklearn import svm
 from sklearn.utils import shuffle
+from sklearn.metrics import plot_confusion_matrix
+import matplotlib.pyplot as plt
 
 from ..data.io import load_labels_from_mat, load_data_from_path
 from ..generic import ProgressNotifier, DataStream
@@ -69,6 +71,10 @@ class Tester():
             
         print('Training Accuracy: {:.2f}'.format(train_score))
         print('Testing Accuracy: {:.2f}'.format(test_score))
+
+        plot_confusion_matrix(clf, potentials.reshape(self.stream.size, 9*50),
+                              self.stream.labels)
+        plt.show()
 
         return potentials
 
