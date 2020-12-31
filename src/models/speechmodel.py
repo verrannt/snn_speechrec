@@ -74,6 +74,7 @@ class ConvLayer():
         self.input_shape = input_shape
         self.n_featuremaps = n_featuremaps
         self.window_size = window_size
+        self.sharing_size = sharing_size
         self.is_training = is_training
 
         # Compute shape of the convolutional layer depending
@@ -154,7 +155,7 @@ class ConvLayer():
 
                 # Update membrane potential if not inhibited
                 self.membrane_voltages[row, col] += self.allowed_to_spike[row, col] * np.sum(np.multiply(
-                    self.weights[row // self.window_size, col, :, :],
+                    self.weights[row // self.sharing_size, col, :, :],
                     spikes[row:row + self.window_size, :]))
 
                 # Post-synaptic spike
@@ -167,13 +168,13 @@ class ConvLayer():
                     # Update weights if stpd is allowed for this neuron
                     if self.is_training:
                         #First, compute in advance to reduce number of computations
-                        part_used = np.multiply(self.weights[row // self.window_size, col, :, :],
-                                                                (1 - self.weights[row // self.window_size, col, :, :]))
+                        part_used = np.multiply(self.weights[row // self.sharing_size, col, :, :],
+                                                                (1 - self.weights[row // self.sharing_size, col, :, :]))
                         # Update for input spike before output spike
                         delta_weights = self.allowed_to_learn[row, col] * self.A_plus * \
                                         np.multiply(part_used,
                                                     self.input_spike_history[row:row + self.window_size, :])
-                        #self.weights[row // self.window_size, col, :, :] += delta_weights
+                        #self.weights[row // self.sharing_size, col, :, :] += delta_weights
                         # Keep track of the total weight change
                         #self.delta_weight += np.sum(abs(delta_weights))
 
@@ -181,7 +182,7 @@ class ConvLayer():
                         delta_weights += self.allowed_to_learn[row, col] * -self.A_minus * \
                                         np.multiply(part_used,
                                                     abs(self.input_spike_history[row:row + self.window_size, :] - 1))
-                        self.weights[row // self.window_size, col, :, :] += delta_weights
+                        self.weights[row // self.sharing_size, col, :, :] += delta_weights
                         # Keep track of the total weight change
                         self.delta_weight += np.sum(abs(delta_weights))
 
