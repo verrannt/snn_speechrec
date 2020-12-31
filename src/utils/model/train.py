@@ -169,6 +169,8 @@ class Trainer():
         # Plot some feature maps at different times in training
         if feature_map_activations: # check if not empty
             self.visualize_featuremaps(feature_map_activations, visualize_freq)
+        # Plot all feature maps after training
+        self.plot_weights(model.conv_layer.weights)
         # Plot output of SNN for a sample of each digit
         self.visualize_snn(model)
         
@@ -247,4 +249,71 @@ class Trainer():
             axs[index, 1].imshow(item[1], vmin=min_weight, vmax=max_weight)
             axs[index, 2].imshow(item[2], vmin=min_weight, vmax=max_weight)
         # Show final plot
+        plt.show()
+
+    def plot_weights(self, activations):
+        """ Plot the feature maps of the SNN (weight of CNN) for all feature maps """
+        # Create subplots with general information
+        # fig, axs = plt.subplots(activations.shape[0]*2, int(activations.shape[1]/2))
+        # plt.setp(axs, xticks=[], yticks=[])
+        #
+        # min_weight = 0
+        # max_weight = max(1, np.max(np.array(activations)))
+        # # Loop over sharing windows
+        # for i in range(activations.shape[0]):
+        #     # Loop over feature maps
+        #     for j in range(int(activations.shape[1]/2)):
+        #         axs[i, j].imshow(activations[i, j], vmin=min_weight, vmax=max_weight)
+        #         axs[i+activations.shape[0], j]\
+        #             .imshow(activations[i, j+int(activations.shape[1]/2)],
+        #                     vmin=min_weight, vmax=max_weight)
+        #         if i == activations.shape[0]-1:
+        #             axs[i, j].set_xlabel(f"#{j+1}")
+        #             axs[i + activations.shape[0], j]\
+        #                 .set_xlabel(f"#{j+int(activations.shape[1]/2)+1}")
+        #     # Set labels
+        #     axs[i, 0].set_ylabel(i+1, rotation='horizontal', labelpad=17)
+        #     axs[i+activations.shape[0], 0].set_ylabel(i+1, rotation='horizontal', labelpad=17)
+        # fig.text(0.05, 0.5, 'Sharing window', ha='center', va='center', rotation='vertical')
+        # fig.text(0.5, 0.05, 'Feature map', ha='center', va='center', rotation='horizontal')
+        # plt.show()
+
+        fig, axs = plt.subplots(activations.shape[0]*3, int(activations.shape[1]/3)+1)
+        plt.setp(axs, xticks=[], yticks=[])
+
+        min_weight = 0
+        # max_weight = (1, np.max(np.array(activations)))
+        # print(f"The maximum weight over all feature maps is {max_weight}")
+        max_weight = 1
+        # Loop over sharing windows
+        for i in range(activations.shape[0]):
+            # Loop over feature maps\
+            # print("  ", i)
+            for j in range(int(activations.shape[1]/3)+1):
+                axs[i, j].imshow(activations[i, j], vmin=min_weight, vmax=max_weight)
+                axs[i + activations.shape[0], j] \
+                    .imshow(activations[i, j + int(activations.shape[1]/3+1)],
+                            vmin=min_weight, vmax=max_weight)
+                # print(j, ": ", np.max(np.array(activations[i, j])), '+',
+                #       np.max(np.array(activations[i, j + int(activations.shape[1]/3+1)])))
+                try:
+                    axs[i+2*activations.shape[0], j]\
+                        .imshow(activations[i, j+2*int(activations.shape[1]/3+1)],
+                                vmin=min_weight, vmax=max_weight)
+                except:
+                    axs[i + 2 * activations.shape[0], j].axis('off')
+
+                if i == activations.shape[0]-1:
+                    axs[i, j].set_xlabel(f"#{j+1}")
+                    axs[i + activations.shape[0], j]\
+                        .set_xlabel(f"#{j+int(activations.shape[1]/3+1)+1}")
+                    axs[i + 2*activations.shape[0], j]\
+                        .set_xlabel(f"#{j+2*int(activations.shape[1]/3+1)+1}")
+            # Set labels
+            axs[i, 0].set_ylabel(i+1, rotation='horizontal', labelpad=17)
+            axs[i+activations.shape[0], 0].set_ylabel(i+1, rotation='horizontal', labelpad=17)
+            axs[i+2*activations.shape[0], 0].set_ylabel(i+1, rotation='horizontal', labelpad=17)
+
+        fig.text(0.05, 0.5, 'Sharing window', ha='center', va='center', rotation='vertical')
+        fig.text(0.5, 0.05, 'Feature map', ha='center', va='center', rotation='horizontal')
         plt.show()

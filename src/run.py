@@ -64,6 +64,10 @@ def getArgs():
                         type=str,
                         help="Plot training history from disk by providing "
                         "name of run, similar to --load and --save.")
+    parser.add_argument("--plot_features",
+                        type=str,
+                        help="Plot all feature maps from disk by providing "
+                        "name of run, similar to --load and --save.")
     parser.add_argument("-v", "--verbose", 
                         dest='verbose', 
                         action='store_true', 
@@ -145,6 +149,14 @@ if __name__=='__main__':
         except KeyError:
             val_scores = None
         Trainer.plot_history(None, train_scores, val_scores, len(train_scores))
+
+    if CONFIGS.plot_features:
+        weights_filename = 'models/weights/weights_{}.npy'\
+            .format(CONFIGS.plot_features)
+
+        model.load_weights(weights_filename)
+
+        Trainer.plot_weights(None, model.conv_layer.weights)
         
     if CONFIGS.freeze:
         # Freeze model
