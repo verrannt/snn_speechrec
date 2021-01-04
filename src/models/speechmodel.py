@@ -24,6 +24,8 @@ class InputLayer():
         for ind1,item in enumerate(mfsc_input):
             for ind2,item2 in enumerate(item):
                 value = self.find_range(item2,ranges)
+                # revert to let the neuron fire earlier with higher feature values
+                value = n_time_options-value-1
                 converted[value,ind1,ind2] = 1
         return converted
         
