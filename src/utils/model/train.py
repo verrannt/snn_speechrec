@@ -113,9 +113,9 @@ class Trainer():
 
                 if (epoch * self.trainstream.size + i) % visualize_freq == 0:
                     # Save weights for feature map visualisation
-                    feature_map_activations.append([copy.copy(model.conv_layer.weights[4,  0, :, :]),
-                                                    copy.copy(model.conv_layer.weights[4, 24, :, :]),
-                                                    copy.copy(model.conv_layer.weights[4, 49, :, :])])
+                    feature_map_activations.append([copy.copy(model.conv_layer.weights[4,  4, :, :]),
+                                                    copy.copy(model.conv_layer.weights[4,  9, :, :]),
+                                                    copy.copy(model.conv_layer.weights[4, 14, :, :])])
             print()
 
             clf = svm.LinearSVC(max_iter=5000)
@@ -234,9 +234,9 @@ class Trainer():
         # Create subplots with general information
         fig, axs = plt.subplots(len(activations), 3)
         plt.setp(axs, xticks=[], yticks=[])
-        axs[len(activations) - 1, 0].set_xlabel("Feature map #1")
-        axs[len(activations) - 1, 1].set_xlabel("Feature map #25")
-        axs[len(activations) - 1, 2].set_xlabel("Feature map #50")
+        axs[len(activations) - 1, 0].set_xlabel("Feature map #5")
+        axs[len(activations) - 1, 1].set_xlabel("Feature map #10")
+        axs[len(activations) - 1, 2].set_xlabel("Feature map #15")
         fig.text(0.05, 0.5, 'Number of training samples', ha='center', va='center', rotation='vertical')
 
         min_weight = 0
