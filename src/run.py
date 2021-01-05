@@ -68,6 +68,10 @@ def getArgs():
                         type=str,
                         help="Plot all feature maps from disk by providing "
                         "name of run, similar to --load and --save.")
+    parser.add_argument("--plot_snn",
+                        type=str,
+                        help="Plot SNN output for all digits from disk by providing "
+                        "name of run, similar to --load and --save.")
     parser.add_argument("-v", "--verbose", 
                         dest='verbose', 
                         action='store_true', 
@@ -157,6 +161,31 @@ if __name__=='__main__':
         model.load_weights(weights_filename)
 
         Trainer.plot_weights(None, model.conv_layer.weights)
+
+    if CONFIGS.plot_snn:
+        # Check if specific path to data is provided
+        if CONFIGS.train_data and CONFIGS.train_labels:
+            datapath = CONFIGS.train_data
+            labelpath = CONFIGS.train_labels
+
+        # Else use hardcoded default
+        else:
+            datapath = "src/utils/data/own_tidigit_train_results.npy"
+            labelpath = "data/Spike TIDIGITS/TIDIGIT_train.mat"
+            print('No train data was provided, defaulting to the following:\n'
+                  ' datapath:  {}\n'
+                  ' labelpath: {}'.format(datapath, labelpath))
+
+        # Create trainer for this data
+        trainer = Trainer(datapath, labelpath, validation_split=0.2)
+
+        # Load in weights
+        weights_filename = 'models/weights/weights_{}.npy'\
+            .format(CONFIGS.plot_snn)
+        model.load_weights(weights_filename)
+
+        # Create the plot
+        Trainer.visualize_snn(trainer, model)
         
     if CONFIGS.freeze:
         # Freeze model
