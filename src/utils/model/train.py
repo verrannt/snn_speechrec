@@ -174,7 +174,10 @@ class Trainer():
         # Plot output of SNN for a sample of each digit
         self.visualize_snn(model)
         
-        return model, train_potentials, val_potentials, train_scores, val_scores
+        return model, \
+               train_potentials, val_potentials, \
+               train_scores, val_scores, \
+               feature_map_activations, visualize_freq
 
     def plot_history(self, train_scores, val_scores, n_epochs):
         fontsize=15
