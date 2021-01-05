@@ -152,7 +152,7 @@ if __name__=='__main__':
         activations_filename = 'models/logs/activations_{}.npy'.format(CONFIGS.save)
         with open(activations_filename, 'wb') as f:
             pickle.dump(act_dict, f)
-        print('Saved history')
+        print('Saved activations')
 
         print()
 
