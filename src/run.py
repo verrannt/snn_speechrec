@@ -65,9 +65,15 @@ def getArgs():
                         help="Plot training history from disk by providing "
                         "name of run, similar to --load and --save.")
     parser.add_argument("--plot_features",
-                        type=str,
-                        help="Plot all feature maps from disk by providing "
-                        "name of run, similar to --load and --save.")
+    parser.add_argument("--plot_featuremaps",
+                        action='store_true',
+                        help="Plot progess of selected feature maps from "
+                        "disk. Provide name of the run using the --load flag.")
+    parser.add_argument("--plot_outputs",
+                        action='store_true',
+                        help="Plot the output of the SNN (pooling potentials) "
+                        "for a sample of each digit, given a trained model "
+                        "using the --load flag.")
     parser.add_argument("-v", "--verbose", 
                         dest='verbose', 
                         action='store_true', 
@@ -108,8 +114,8 @@ if __name__=='__main__':
         trainer = Trainer(datapath, labelpath, validation_split=0.2)
         
         # Fit the model on the data
-        model, train_potentials, val_potentials, train_scores, val_scores = \
-            trainer.fit(model, epochs=CONFIGS.train)
+        model, train_potentials, val_potentials, train_scores, val_scores, \
+            activations, freq = trainer.fit(model, epochs=CONFIGS.train)
 
     if CONFIGS.save:
 
@@ -136,6 +142,15 @@ if __name__=='__main__':
             pickle.dump(history, f)
         print('Saved history')
 
+        # Save feature map activations as dictionary
+        act_dict = dict()
+        for index, item in enumerate(activations):
+            act_dict[index*freq] = item
+        activations_filename = 'models/logs/activations_{}.npy'.format(CONFIGS.save)
+        with open(activations_filename, 'wb') as f:
+            pickle.dump(act_dict, f)
+        print('Saved history')
+
         print()
 
     if CONFIGS.plot_history:
@@ -151,12 +166,29 @@ if __name__=='__main__':
         Trainer.plot_history(None, train_scores, val_scores, len(train_scores))
 
     if CONFIGS.plot_features:
-        weights_filename = 'models/weights/weights_{}.npy'\
-            .format(CONFIGS.plot_features)
+    if CONFIGS.plot_featuremaps:
+        if not CONFIGS.load:
+            raise ValueError('Using this flag requires providing the name of '
+                'the run using the --load flag.')
 
-        model.load_weights(weights_filename)
+        activations_filename = 'models/logs/activations_{}.npy'\
+            .format(CONFIGS.load)
+        with open(activations_filename, 'rb') as f:
+            act_dict = pickle.load(f)
+        visualize_freq = list(act_dict.keys())[1]
+        activations = [act_dict[k] for k in act_dict.keys()]
 
-        Trainer.plot_weights(None, model.conv_layer.weights)
+        Trainer.visualize_featuremaps(None, activations, visualize_freq)
+
+    if CONFIGS.plot_outputs:
+        if not CONFIGS.load:
+            raise ValueError('Using this flag requires loading model weights '
+                'using the --load flag.')
+
+        # NOTE This is a hardcoded default to the TIDIGIT data
+        datapath = "src/utils/data/own_tidigit_train_results.npy"
+        labelpath = "data/Spike TIDIGITS/TIDIGIT_train.mat"
+        Trainer(datapath, labelpath, validation_split=0.2).visualize_snn(model)
         
     if CONFIGS.freeze:
         # Freeze model
