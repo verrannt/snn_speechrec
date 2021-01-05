@@ -229,30 +229,38 @@ class Trainer():
             # Check if all labels are plotted
             if set(labels_used) == uniques:
                 done = True
+
+        # Clear image when there is an odd number of digits
+        if len(uniques) % 2 != 0:
+            axs[int(np.ceil(len(uniques) / 2) - 1), 1].axis('off')
+
         # Show final plot
         plt.show()
 
     def visualize_featuremaps(self, activations, steps):
         """ Plot the feature maps of the SNN (weight of CNN) for three feature maps """
-        # Create subplots with general information
-        fig, axs = plt.subplots(len(activations), 3)
-        plt.setp(axs, xticks=[], yticks=[])
-        axs[len(activations) - 1, 0].set_xlabel("Feature map #5")
-        axs[len(activations) - 1, 1].set_xlabel("Feature map #10")
-        axs[len(activations) - 1, 2].set_xlabel("Feature map #15")
-        fig.text(0.05, 0.5, 'Number of training samples', ha='center', va='center', rotation='vertical')
+        try:
+            # Create subplots with general information
+            fig, axs = plt.subplots(len(activations), 3)
+            plt.setp(axs, xticks=[], yticks=[])
+            axs[len(activations) - 1, 0].set_xlabel("Feature map #5")
+            axs[len(activations) - 1, 1].set_xlabel("Feature map #10")
+            axs[len(activations) - 1, 2].set_xlabel("Feature map #15")
+            fig.text(0.05, 0.5, 'Number of training samples', ha='center', va='center', rotation='vertical')
 
-        min_weight = 0
-        max_weight = max(1, np.max(np.array(activations)))
-        for index, item in enumerate(activations):
-            # Set label
-            axs[index, 0].set_ylabel(steps * index, rotation='horizontal', labelpad=17)
-            # Plot the three feature maps
-            axs[index, 0].imshow(item[0], vmin=min_weight, vmax=max_weight)
-            axs[index, 1].imshow(item[1], vmin=min_weight, vmax=max_weight)
-            axs[index, 2].imshow(item[2], vmin=min_weight, vmax=max_weight)
-        # Show final plot
-        plt.show()
+            min_weight = 0
+            max_weight = max(1, np.max(np.array(activations)))
+            for index, item in enumerate(activations):
+                # Set label
+                axs[index, 0].set_ylabel(steps * index, rotation='horizontal', labelpad=17)
+                # Plot the three feature maps
+                axs[index, 0].imshow(item[0], vmin=min_weight, vmax=max_weight)
+                axs[index, 1].imshow(item[1], vmin=min_weight, vmax=max_weight)
+                axs[index, 2].imshow(item[2], vmin=min_weight, vmax=max_weight)
+            # Show final plot
+            plt.show()
+        except:
+            print("[!] Something went wrong with the feature map plot")
 
     def plot_weights(self, activations):
         """ Plot the feature maps of the SNN (weight of CNN) for all feature maps """

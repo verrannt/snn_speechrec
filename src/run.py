@@ -174,11 +174,34 @@ if __name__=='__main__':
         Trainer.plot_history(None, train_scores, val_scores, len(train_scores))
 
     if CONFIGS.plot_features:
+        # Check if model is loaded
         if not CONFIGS.load:
             raise ValueError('Using this flag requires loading model weights '
                 'using the --load flag.')
         
         Trainer.plot_weights(None, model.conv_layer.weights)
+
+    if CONFIGS.plot_outputs:
+        # Check if model is loaded
+        if not CONFIGS.load:
+            raise ValueError('Using this flag requires loading model weights '
+                'using the --load flag.')
+
+        # Check if specific path to data is provided
+        if CONFIGS.train_data and CONFIGS.train_labels:
+            datapath = CONFIGS.train_data
+            labelpath = CONFIGS.train_labels
+
+        # Else use hardcoded default
+        else:
+            datapath = "src/utils/data/own_tidigit_train_results.npy"
+            labelpath = "data/Spike TIDIGITS/TIDIGIT_train.mat"
+            print('No train data was provided, defaulting to the following:\n'
+                  ' datapath:  {}\n'
+                  ' labelpath: {}'.format(datapath, labelpath))
+
+        # Plot outputs on this data
+        Trainer(datapath, labelpath, validation_split=0.2).visualize_snn(model)
         
     if CONFIGS.plot_featuremaps:
         if not CONFIGS.load:
@@ -193,16 +216,6 @@ if __name__=='__main__':
         activations = [act_dict[k] for k in act_dict.keys()]
 
         Trainer.visualize_featuremaps(None, activations, visualize_freq)
-
-    if CONFIGS.plot_outputs:
-        if not CONFIGS.load:
-            raise ValueError('Using this flag requires loading model weights '
-                'using the --load flag.')
-
-        # NOTE This is a hardcoded default to the TIDIGIT data
-        datapath = "src/utils/data/own_tidigit_train_results.npy"
-        labelpath = "data/Spike TIDIGITS/TIDIGIT_train.mat"
-        Trainer(datapath, labelpath, validation_split=0.2).visualize_snn(model)
 
     if CONFIGS.freeze:
         # Freeze model

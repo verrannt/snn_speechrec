@@ -73,7 +73,9 @@ class Tester():
         print('Testing Accuracy: {:.2f}'.format(test_score))
 
         plot_confusion_matrix(clf, potentials.reshape(self.stream.size, 9*50),
-                              self.stream.labels)
+                              self.stream.labels,
+                              labels=list(map(int, list(set(self.stream.labels)))),
+                              values_format='d')
         plt.show()
 
         return potentials
