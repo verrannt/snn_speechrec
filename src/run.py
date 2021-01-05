@@ -61,10 +61,13 @@ def getArgs():
                         "provided, will default to path hardcoded in this "
                         "script.")
     parser.add_argument("--plot_history",
-                        type=str,
-                        help="Plot training history from disk by providing "
-                        "name of run, similar to --load and --save.")
+                        action='store_true',
+                        help="Plot training history from disk. Provide name "
+                        "of the run using the --load flag.")
     parser.add_argument("--plot_features",
+                        action='store_true',
+                        help="Plot all feature maps from disk. Provide name "
+                        "of the run using the --load flag.")
     parser.add_argument("--plot_featuremaps",
                         action='store_true',
                         help="Plot progess of selected feature maps from "
@@ -154,8 +157,12 @@ if __name__=='__main__':
         print()
 
     if CONFIGS.plot_history:
+        if not CONFIGS.load:
+            raise ValueError('Using this flag requires providing the name of '
+                'the run using the --load flag.')
+
         history_filename = 'models/logs/train_history_{}.npy'\
-            .format(CONFIGS.plot_history)
+            .format(CONFIGS.load)
         with open(history_filename, 'rb') as f:
             history = pickle.load(f)
         train_scores = history['train_acc']
@@ -163,9 +170,16 @@ if __name__=='__main__':
             val_scores = history['val_acc']
         except KeyError:
             val_scores = None
+        
         Trainer.plot_history(None, train_scores, val_scores, len(train_scores))
 
     if CONFIGS.plot_features:
+        if not CONFIGS.load:
+            raise ValueError('Using this flag requires loading model weights '
+                'using the --load flag.')
+        
+        Trainer.plot_weights(None, model.conv_layer.weights)
+        
     if CONFIGS.plot_featuremaps:
         if not CONFIGS.load:
             raise ValueError('Using this flag requires providing the name of '
@@ -189,7 +203,7 @@ if __name__=='__main__':
         datapath = "src/utils/data/own_tidigit_train_results.npy"
         labelpath = "data/Spike TIDIGITS/TIDIGIT_train.mat"
         Trainer(datapath, labelpath, validation_split=0.2).visualize_snn(model)
-        
+
     if CONFIGS.freeze:
         # Freeze model
         model.freeze()
