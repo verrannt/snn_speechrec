@@ -243,15 +243,14 @@ if __name__=='__main__':
         # solutions, but this works for now.
 
         # Load training potentials
-        if CONFIGS.load:
-            run_name = CONFIGS.load
-        elif CONFIGS.save:
+        if CONFIGS.save:
             run_name = CONFIGS.save
+        elif CONFIGS.load:
+            run_name = CONFIGS.load
         else:
             raise ValueError(
                 'Script was called with the --test flag, yet no save nor load '
                 'name was provided.')
-        run_name = CONFIGS.load if CONFIGS.load else CONFIGS.save
         run_name = 'models/logs/train_potentials_{}.npy'.format(run_name)
         with open(run_name, 'rb') as f:
             train_potentials = np.load(f)[-1]
