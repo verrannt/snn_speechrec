@@ -35,7 +35,7 @@ class Trainer():
         if valdata is not None:
             self.valstream = DataStream(valdata, vallabels)
             self.val_prog = ProgressNotifier(
-                title='Validating', total=self.valstream.size, show_bar=False)
+                title='Validating', total=self.valstream.size)
             self.uses_validation = True
         else:
             self.uses_validation = False
@@ -113,9 +113,9 @@ class Trainer():
 
                 if (epoch * self.trainstream.size + i) % visualize_freq == 0:
                     # Save weights for feature map visualisation
-                    feature_map_activations.append([copy.copy(model.conv_layer.weights[4,  0, :, :]),
-                                                    copy.copy(model.conv_layer.weights[4, 24, :, :]),
-                                                    copy.copy(model.conv_layer.weights[4, 49, :, :])])
+                    feature_map_activations.append([copy.copy(model.conv_layer.weights[4,  4, :, :]),
+                                                    copy.copy(model.conv_layer.weights[4,  9, :, :]),
+                                                    copy.copy(model.conv_layer.weights[4, 14, :, :])])
             print()
 
             clf = svm.LinearSVC(max_iter=5000)
@@ -174,7 +174,10 @@ class Trainer():
         # Plot output of SNN for a sample of each digit
         self.visualize_snn(model)
         
-        return model, train_potentials, val_potentials, train_scores, val_scores
+        return model, \
+               train_potentials, val_potentials, \
+               train_scores, val_scores, \
+               feature_map_activations, visualize_freq
 
     def plot_history(self, train_scores, val_scores, n_epochs):
         fontsize=15
@@ -198,7 +201,7 @@ class Trainer():
         uniques = set(self.trainstream.labels)
 
         # Create subplots with general information
-        fig, axs = plt.subplots(int(np.ceil(len(uniques) / 2)), 2)
+        fig, axs = plt.subplots(int(np.ceil(len(uniques) / 2)), 2, figsize=(5,5))
         plt.setp(axs, xticks=[], yticks=[])
         plt.subplots_adjust(hspace=0.5)
         axs[int(np.ceil(len(uniques) / 2) - 1), 0].set_xlabel("Feature maps")
@@ -232,6 +235,7 @@ class Trainer():
             axs[int(np.ceil(len(uniques) / 2) - 1), 1].axis('off')
 
         # Show final plot
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.95)#, bottom=0.10, hspace=0.0, wspace=0.25)
         plt.show()
 
     def visualize_featuremaps(self, activations, steps):
@@ -240,9 +244,9 @@ class Trainer():
             # Create subplots with general information
             fig, axs = plt.subplots(len(activations), 3)
             plt.setp(axs, xticks=[], yticks=[])
-            axs[len(activations) - 1, 0].set_xlabel("Feature map #1")
-            axs[len(activations) - 1, 1].set_xlabel("Feature map #25")
-            axs[len(activations) - 1, 2].set_xlabel("Feature map #50")
+            axs[len(activations) - 1, 0].set_xlabel("Feature map #5")
+            axs[len(activations) - 1, 1].set_xlabel("Feature map #10")
+            axs[len(activations) - 1, 2].set_xlabel("Feature map #15")
             fig.text(0.05, 0.5, 'Number of training samples', ha='center', va='center', rotation='vertical')
 
             min_weight = 0
@@ -254,6 +258,7 @@ class Trainer():
                 axs[index, 0].imshow(item[0], vmin=min_weight, vmax=max_weight)
                 axs[index, 1].imshow(item[1], vmin=min_weight, vmax=max_weight)
                 axs[index, 2].imshow(item[2], vmin=min_weight, vmax=max_weight)
+            plt.subplots_adjust(left=0.15, right=0.95, top=0.93, bottom=0.10, hspace=0.0, wspace=0.25)
             # Show final plot
             plt.show()
         except:
@@ -286,7 +291,7 @@ class Trainer():
         # fig.text(0.5, 0.05, 'Feature map', ha='center', va='center', rotation='horizontal')
         # plt.show()
 
-        fig, axs = plt.subplots(activations.shape[0]*3, int(activations.shape[1]/3)+1)
+        fig, axs = plt.subplots(activations.shape[0]*3, int(activations.shape[1]/3)+1, figsize=(16,12))
         plt.setp(axs, xticks=[], yticks=[])
 
         min_weight = 0
@@ -324,4 +329,5 @@ class Trainer():
 
         fig.text(0.05, 0.5, 'Sharing window', ha='center', va='center', rotation='vertical')
         fig.text(0.5, 0.05, 'Feature map', ha='center', va='center', rotation='horizontal')
+        plt.subplots_adjust(left=0.09, right=0.95, top=0.95, bottom=0.08, hspace=0.0, wspace=0.15)
         plt.show()

@@ -61,17 +61,22 @@ def getArgs():
                         "provided, will default to path hardcoded in this "
                         "script.")
     parser.add_argument("--plot_history",
-                        type=str,
-                        help="Plot training history from disk by providing "
-                        "name of run, similar to --load and --save.")
+                        action='store_true',
+                        help="Plot training history from disk. Provide name "
+                        "of the run using the --load flag.")
     parser.add_argument("--plot_features",
-                        type=str,
-                        help="Plot all feature maps from disk by providing "
-                        "name of run, similar to --load and --save.")
-    parser.add_argument("--plot_snn",
-                        type=str,
-                        help="Plot SNN output for all digits from disk by providing "
-                        "name of run, similar to --load and --save.")
+                        action='store_true',
+                        help="Plot all feature maps from disk. Provide name "
+                        "of the run using the --load flag.")
+    parser.add_argument("--plot_featuremaps",
+                        action='store_true',
+                        help="Plot progess of selected feature maps from "
+                        "disk. Provide name of the run using the --load flag.")
+    parser.add_argument("--plot_outputs",
+                        action='store_true',
+                        help="Plot the output of the SNN (pooling potentials) "
+                        "for a sample of each digit, given a trained model "
+                        "using the --load flag.")
     parser.add_argument("-v", "--verbose", 
                         dest='verbose', 
                         action='store_true', 
@@ -102,7 +107,7 @@ if __name__=='__main__':
 
         # Else use hardcoded default
         else:
-            datapath = "src/utils/data/own_tidigit_train_results.npy"
+            datapath = "src/utils/data/lib_tidigit_train_results.npy"
             labelpath = "data/Spike TIDIGITS/TIDIGIT_train.mat"
             print('No train data was provided, defaulting to the following:\n'
                   ' datapath:  {}\n'
@@ -112,8 +117,8 @@ if __name__=='__main__':
         trainer = Trainer(datapath, labelpath, validation_split=0.2)
         
         # Fit the model on the data
-        model, train_potentials, val_potentials, train_scores, val_scores = \
-            trainer.fit(model, epochs=CONFIGS.train)
+        model, train_potentials, val_potentials, train_scores, val_scores, \
+            activations, freq = trainer.fit(model, epochs=CONFIGS.train)
 
     if CONFIGS.save:
 
@@ -140,11 +145,24 @@ if __name__=='__main__':
             pickle.dump(history, f)
         print('Saved history')
 
+        # Save feature map activations as dictionary
+        act_dict = dict()
+        for index, item in enumerate(activations):
+            act_dict[index*freq] = item
+        activations_filename = 'models/logs/activations_{}.npy'.format(CONFIGS.save)
+        with open(activations_filename, 'wb') as f:
+            pickle.dump(act_dict, f)
+        print('Saved activations')
+
         print()
 
     if CONFIGS.plot_history:
+        if not CONFIGS.load:
+            raise ValueError('Using this flag requires providing the name of '
+                'the run using the --load flag.')
+
         history_filename = 'models/logs/train_history_{}.npy'\
-            .format(CONFIGS.plot_history)
+            .format(CONFIGS.load)
         with open(history_filename, 'rb') as f:
             history = pickle.load(f)
         train_scores = history['train_acc']
@@ -152,17 +170,23 @@ if __name__=='__main__':
             val_scores = history['val_acc']
         except KeyError:
             val_scores = None
+        
         Trainer.plot_history(None, train_scores, val_scores, len(train_scores))
 
     if CONFIGS.plot_features:
-        weights_filename = 'models/weights/weights_{}.npy'\
-            .format(CONFIGS.plot_features)
-
-        model.load_weights(weights_filename)
-
+        # Check if model is loaded
+        if not CONFIGS.load:
+            raise ValueError('Using this flag requires loading model weights '
+                'using the --load flag.')
+        
         Trainer.plot_weights(None, model.conv_layer.weights)
 
-    if CONFIGS.plot_snn:
+    if CONFIGS.plot_outputs:
+        # Check if model is loaded
+        if not CONFIGS.load:
+            raise ValueError('Using this flag requires loading model weights '
+                'using the --load flag.')
+
         # Check if specific path to data is provided
         if CONFIGS.train_data and CONFIGS.train_labels:
             datapath = CONFIGS.train_data
@@ -170,23 +194,29 @@ if __name__=='__main__':
 
         # Else use hardcoded default
         else:
-            datapath = "src/utils/data/own_tidigit_train_results.npy"
+            datapath = "src/utils/data/lib_tidigit_train_results.npy"
             labelpath = "data/Spike TIDIGITS/TIDIGIT_train.mat"
             print('No train data was provided, defaulting to the following:\n'
                   ' datapath:  {}\n'
                   ' labelpath: {}'.format(datapath, labelpath))
 
-        # Create trainer for this data
-        trainer = Trainer(datapath, labelpath, validation_split=0.2)
-
-        # Load in weights
-        weights_filename = 'models/weights/weights_{}.npy'\
-            .format(CONFIGS.plot_snn)
-        model.load_weights(weights_filename)
-
-        # Create the plot
-        Trainer.visualize_snn(trainer, model)
+        # Plot outputs on this data
+        Trainer(datapath, labelpath, validation_split=0.2).visualize_snn(model)
         
+    if CONFIGS.plot_featuremaps:
+        if not CONFIGS.load:
+            raise ValueError('Using this flag requires providing the name of '
+                'the run using the --load flag.')
+
+        activations_filename = 'models/logs/activations_{}.npy'\
+            .format(CONFIGS.load)
+        with open(activations_filename, 'rb') as f:
+            act_dict = pickle.load(f)
+        visualize_freq = list(act_dict.keys())[1]
+        activations = [act_dict[k] for k in act_dict.keys()]
+
+        Trainer.visualize_featuremaps(None, activations, visualize_freq)
+
     if CONFIGS.freeze:
         # Freeze model
         model.freeze()
@@ -202,7 +232,7 @@ if __name__=='__main__':
             test_datapath = CONFIGS.test_data
             test_labelpath = CONFIGS.test_labels
         else:
-            test_datapath = "src/utils/data/own_tidigit_test_results.npy"
+            test_datapath = "src/utils/data/lib_tidigit_test_results.npy"
             test_labelpath = "data/Spike TIDIGITS/TIDIGIT_test.mat"
             print('No test data was provided, defaulting to the following:\n'
                   ' datapath:  {}\n'
@@ -213,15 +243,14 @@ if __name__=='__main__':
         # solutions, but this works for now.
 
         # Load training potentials
-        if CONFIGS.load:
-            run_name = CONFIGS.load
-        elif CONFIGS.save:
+        if CONFIGS.save:
             run_name = CONFIGS.save
+        elif CONFIGS.load:
+            run_name = CONFIGS.load
         else:
             raise ValueError(
                 'Script was called with the --test flag, yet no save nor load '
                 'name was provided.')
-        run_name = CONFIGS.load if CONFIGS.load else CONFIGS.save
         run_name = 'models/logs/train_potentials_{}.npy'.format(run_name)
         with open(run_name, 'rb') as f:
             train_potentials = np.load(f)[-1]
