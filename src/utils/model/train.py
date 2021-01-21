@@ -35,7 +35,7 @@ class Trainer():
         if valdata is not None:
             self.valstream = DataStream(valdata, vallabels)
             self.val_prog = ProgressNotifier(
-                title='Validating', total=self.valstream.size, show_bar=False)
+                title='Validating', total=self.valstream.size)
             self.uses_validation = True
         else:
             self.uses_validation = False
