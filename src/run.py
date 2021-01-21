@@ -107,7 +107,7 @@ if __name__=='__main__':
 
         # Else use hardcoded default
         else:
-            datapath = "src/utils/data/own_tidigit_train_results.npy"
+            datapath = "src/utils/data/lib_tidigit_train_results.npy"
             labelpath = "data/Spike TIDIGITS/TIDIGIT_train.mat"
             print('No train data was provided, defaulting to the following:\n'
                   ' datapath:  {}\n'
@@ -194,7 +194,7 @@ if __name__=='__main__':
 
         # Else use hardcoded default
         else:
-            datapath = "src/utils/data/own_tidigit_train_results.npy"
+            datapath = "src/utils/data/lib_tidigit_train_results.npy"
             labelpath = "data/Spike TIDIGITS/TIDIGIT_train.mat"
             print('No train data was provided, defaulting to the following:\n'
                   ' datapath:  {}\n'
@@ -232,7 +232,7 @@ if __name__=='__main__':
             test_datapath = CONFIGS.test_data
             test_labelpath = CONFIGS.test_labels
         else:
-            test_datapath = "src/utils/data/own_tidigit_test_results.npy"
+            test_datapath = "src/utils/data/lib_tidigit_test_results.npy"
             test_labelpath = "data/Spike TIDIGITS/TIDIGIT_test.mat"
             print('No test data was provided, defaulting to the following:\n'
                   ' datapath:  {}\n'
