@@ -4,7 +4,7 @@ Implementation of the paper "Unsupervised speech recognition through spike-timin
 
 We implement the convolutional spiking neural network from the paper that is trained to recognize speech uttarances using Spike-Timing Dependent Plasticity (STDP). The network training is fully unsupervised, as the network acts as a feature extractor that is only trained using local STDP. A linear SVM is used to classify the embeddings produced by the network and predict the utterance class from it. The authors use the [TIMIT](https://catalog.ldc.upenn.edu/LDC93S1) as well as the [TIDIGITS](https://catalog.ldc.upenn.edu/LDC93S10) dataset to train and test their model. We only focused on TIDIGITS, since documentation for the proper usage of TIMIT was found lacking.
 
-The authors report a classification accuracy of `97.5%` on the test set of the TIDIGITS dataset. In our implementation, we were only able to achieve a `92%` accuracy. For an analysis of the possible reasons for this, as well as detailed documentation of the implementation process, please see [our report](https://github.com/verrannt/neuromorphic_project/blob/master/Report.pdf).
+The authors report a classification accuracy of `97.5%` on the test set of the TIDIGITS dataset. In our implementation, we were only able to achieve a `92%` accuracy. For an analysis of the possible reasons for this, as well as detailed documentation of the implementation process, please see [our report](https://github.com/verrannt/snn_speechrec/blob/master/Report.pdf).
 
 ## Directory structure
 
